@@ -1,0 +1,31 @@
+﻿version: "3.9"
+
+services:
+  llm-service:
+    build:
+      context: ./apps/backend/ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=dev
+
+  api-gateway:
+    build:
+      context: ./apps/backend/node-api
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - LLM_SERVICE_URL=http://llm-service:8000
+    depends_on:
+      - llm-service
+
+  frontend:
+    build:
+      context: ./apps/frontend/react-chat-ui
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:3001
+    depends_on:
+      - api-gateway

@@ -1,0 +1,27 @@
+﻿# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vite/React
+.vite/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data
+apps/backend/node-api/data/chat-history.json
+apps/backend/ai-service/.chroma/

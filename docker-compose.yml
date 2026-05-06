@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  node-api:
+    build:
+      context: ./apps/backend/node-api
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - LEGAL_DOCS_DIR=/data/legal_documents
+    volumes:
+      - ./data/legal_documents:/data/legal_documents:ro
+
+  frontend:
+    build:
+      context: ./apps/frontend/react-chat-ui
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_NODE_URL=http://localhost:3001
+    depends_on:
+      - node-api

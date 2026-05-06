@@ -1,0 +1,244 @@
+[
+  {
+    "id": "0f27f897-1144-4465-a585-c41207a6414d",
+    "name": "Demo User",
+    "email": "demo_7acec50b@test.local",
+    "passwordHash": "9d07e37afdda4e41f3c675d2ae3bd90b75675a7d3f36522b8ed059646730bc0880c36ddfa14129ca8cff84134e38fdc36a06e233ded2612ecec1444d4249bbef",
+    "salt": "0b6f4e3ac1c4b84690d76eb32f6913fa",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T01:29:59.716Z"
+  },
+  {
+    "id": "0bd8d7ec-29fd-45d5-8f38-9d9d55e365c0",
+    "name": "Jerry",
+    "email": "pakhrinsital01@gmail.com",
+    "passwordHash": "cb19e6e996672baa0ca8c07b36efde001ed82c0277bfacf259bc039261e861922b447cd6ad5fb5f271fbe61a66efef3c93899cb2c1afade3e07acbc93bfa6c9a",
+    "salt": "a99abd2c44cd665a9302ec847615a6da",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 9
+    },
+    "conversations": [
+      {
+        "id": "9279d83b-bdc4-411d-b290-d4bbea2fc1b0",
+        "title": "General legal question",
+        "messages": [
+          {
+            "role": "assistant",
+            "text": "Hello! I can help explain UK human rights, visas, and legal protections in simple terms.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": []
+          },
+          {
+            "role": "user",
+            "text": "Hi",
+            "time": "3:24:04 AM"
+          },
+          {
+            "role": "assistant",
+            "text": "I couldn't find relevant information in the current sources. Try rephrasing or add more official sources.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": [],
+            "queryType": "legal_info",
+            "time": "3:24:04 AM"
+          },
+          {
+            "role": "user",
+            "text": "How much notice must a landlord give?",
+            "time": "3:24:13 AM"
+          },
+          {
+            "role": "assistant",
+            "text": "I could not find sufficiently relevant sources for that topic in the current knowledge base. Please rephrase your question, and I will try again with focused tenancy information.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": [],
+            "queryType": "legal_info",
+            "time": "3:24:13 AM"
+          },
+          {
+            "role": "user",
+            "text": "Tenancy",
+            "time": "3:24:22 AM"
+          },
+          {
+            "role": "assistant",
+            "text": "I could not find sufficiently relevant sources for that topic in the current knowledge base. Please rephrase your question, and I will try again with focused tenancy information.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": [],
+            "queryType": "legal_info",
+            "time": "3:24:23 AM"
+          },
+          {
+            "role": "user",
+            "text": "What are my rights at work?",
+            "time": "3:24:30 AM"
+          },
+          {
+            "role": "assistant",
+            "text": "I could not find sufficiently relevant sources for that topic in the current knowledge base. Please rephrase your question, and I will try again with focused tenancy information.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": [],
+            "queryType": "legal_info",
+            "time": "3:24:30 AM"
+          },
+          {
+            "role": "user",
+            "text": "Human rights",
+            "time": "3:25:06 AM"
+          },
+          {
+            "role": "assistant",
+            "text": "I could not find sufficiently relevant sources for that topic in the current knowledge base. Please rephrase your question, and I will try again with focused tenancy information.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": [],
+            "queryType": "legal_info",
+            "time": "3:25:06 AM"
+          },
+          {
+            "role": "user",
+            "text": "What does Article 10 of the Human Rights Act protect?",
+            "time": "3:25:46 AM"
+          },
+          {
+            "role": "assistant",
+            "text": "I could not find sufficiently relevant sources for that topic in the current knowledge base. Please rephrase your question, and I will try again with focused tenancy information.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": [],
+            "queryType": "legal_info",
+            "time": "3:25:46 AM"
+          }
+        ],
+        "updatedAt": 1775701546225
+      },
+      {
+        "id": "e4eb384c-ec94-443e-812b-46bad14ca849",
+        "title": "New chat",
+        "messages": [
+          {
+            "role": "assistant",
+            "text": "Hello! I can help explain UK human rights, visas, and legal protections in simple terms.",
+            "citations": [],
+            "confidence": "Low",
+            "retrievedChunks": []
+          }
+        ],
+        "updatedAt": 1775701439764
+      }
+    ],
+    "createdAt": "2026-04-09T01:34:16.914Z"
+  },
+  {
+    "id": "2452a17f-e91e-4eef-91ed-047996e89449",
+    "name": "Diag",
+    "email": "diag_bddd2be2@test.local",
+    "passwordHash": "e0e87c4a62edee42f07c034b7033d6e4eaa37c1cb4eecdd71514eadea5e0fd6e9d398fc3932b4e95aff9089cd3a63f5a7f3199956358b6cb41a3ab50ea5c4551",
+    "salt": "cb4076988963519cf7eccd6583674333",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T01:39:21.196Z"
+  },
+  {
+    "id": "9fcb17c1-904f-4ffc-961c-81d7a9d72819",
+    "name": "Hist Fix",
+    "email": "histfix_983eb4f0@test.local",
+    "passwordHash": "13a090034393c7198550d90508e7cc896afece2a7cf153e0ec4619d78b688e3a5dcbe72b1189bd0ff2c50286f1969f3f06b53562bb5fb56ca0da0a0d8516c602",
+    "salt": "016fe2119dbf75674febdfcdd2bd66f2",
+    "plan": "free",
+    "usageByDate": {},
+    "conversations": [],
+    "createdAt": "2026-04-09T01:43:41.013Z"
+  },
+  {
+    "id": "e1a5d97d-ad33-411e-a557-1f4b4786cccd",
+    "name": "Hist Fix",
+    "email": "histfix3_c35486b8@test.local",
+    "passwordHash": "59b2b8c5ff442a7832cb7532b1ea714fe2284cfd00f05764861d56f9b14c5ae798e26a0ad1c45a03345e61da5aa710a8530ed54186d44b6a169fa2b1984808f3",
+    "salt": "1bd6303f3e1fc76a0badec07b49b48b4",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T01:45:38.948Z"
+  },
+  {
+    "id": "e88e6852-db1d-4075-a0eb-5fbf0569d6c8",
+    "name": "Tenancy Fix",
+    "email": "tenancyfix_2b29ba06@test.local",
+    "passwordHash": "2d880d8a00356ce1380d05eadb3f1ddad550bbf3d4656f387afdcc8a9f930b6c8fc9f11d58b3bbc3f85bd8ab4158e2b393e8bbbf1a6eb2099b3c79b4dbfa3c29",
+    "salt": "5da3df0356e0020ae65d4a2257156859",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T01:52:13.631Z"
+  },
+  {
+    "id": "99e7de99-e936-4176-9f2c-1208cafc73a6",
+    "name": "Tenancy Fix",
+    "email": "tenancyfix2_c90502d6@test.local",
+    "passwordHash": "b775dd29a1e2567be3a8e025673c5b3248b5ef5c8601dea3dd64c86c97ea4e1df45306470d0017bf16ea39806e048697dd1822f3a0b725deae1c7b405a38d162",
+    "salt": "1b26e32f71c8ecb9398fc5a0097aae4e",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T01:56:05.344Z"
+  },
+  {
+    "id": "32e8ddbd-9fa3-4a79-a911-1d9e23b3dc1f",
+    "name": "HR Test",
+    "email": "hrtest_be778b93@test.local",
+    "authProvider": "local",
+    "passwordHash": "ce7fdbe80b2b25ce6d2fb0dec1e9fef86bac35276772bcd85f5db1f4b3c53b6d3c71415c8d37d0935fc751836d9382bbad6133976d956899d560b12e796cb941",
+    "salt": "043c2ebfdce8fa6795fb153a4b3cd7d8",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T02:27:01.038Z"
+  },
+  {
+    "id": "9d208944-e36f-47f5-a823-1771658cef51",
+    "name": "HR Test",
+    "email": "hrtest2_054db9d3@test.local",
+    "authProvider": "local",
+    "passwordHash": "18bcb4bc3c680d8a7f4e4817acc4f49d834cdbb99ed3716f2659e749fc4e6b3f53a87a7b637ee50ab9dca39c2e0ab0c7bd09b50ca4d93c48a3c12f3f4c52ce6b",
+    "salt": "8e00d5d3e810aa3ce9658e49c491d186",
+    "plan": "free",
+    "usageByDate": {
+      "2026-04-09": 1
+    },
+    "conversations": [],
+    "createdAt": "2026-04-09T02:27:59.937Z"
+  },
+  {
+    "id": "ed304399-561d-4a4b-b162-5e7fd473649f",
+    "name": "Diag",
+    "email": "diag_682ce345@test.local",
+    "authProvider": "local",
+    "passwordHash": "cbea4465794f5771a41af3fe6159be0351a88238680d903b30b682e44f8c951590ce2f61eb4d28c750e08e3375ddf5bad84768ec0c471bedde30d884be173e42",
+    "salt": "804bfc856e2f033908edabc477fe6664",
+    "plan": "free",
+    "usageByDate": {},
+    "conversations": [],
+    "createdAt": "2026-04-09T02:29:23.626Z"
+  }
+]
