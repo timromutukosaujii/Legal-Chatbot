@@ -68,7 +68,12 @@ export default function ChatWindow({ session, onUpdateSession, profile, onComman
         role: m.role,
         text: m.text
       }));
-      const data = await sendChatMessage(question, historyPayload);
+      const data = await sendChatMessage({
+        token: profile?.token || null,
+        question,
+        history: historyPayload,
+        sessionId: session?.id || null
+      });
       const updated = [
         ...nextMessages,
         {
@@ -76,8 +81,8 @@ export default function ChatWindow({ session, onUpdateSession, profile, onComman
           text: data.answer,
           citations: data.citations || [],
           confidence: data.confidence || "Low",
-          retrievedChunks: data.retrieved_chunks || [],
-          queryType: data.query_type || "legal_info",
+          retrievedChunks: data.retrievedChunks || data.retrieved_chunks || [],
+          queryType: data.query_type || data.queryType || "legal_info",
           time: new Date().toLocaleTimeString()
         }
       ];

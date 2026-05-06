@@ -50,7 +50,7 @@ function getCitationRelevance(citations, domain) {
   const terms = DOMAIN_TERMS[domain] || [];
   let matched = 0;
   for (const c of citations) {
-    const text = `${c?.source || ""} ${c?.snippet || ""}`.toLowerCase();
+    const text = `${c?.title || ""} ${c?.topic || ""} ${c?.source || ""} ${c?.snippet || ""}`.toLowerCase();
     if (terms.some((t) => new RegExp(`\\b${t.replace(/\s+/g, "\\s+")}\\b`, "i").test(text))) {
       matched += 1;
     }

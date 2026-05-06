@@ -21,7 +21,18 @@ async function parseResponse(res) {
   return res.json();
 }
 
-export async function sendChatMessage({ token, question, history = [], sessionId = null }) {
+export async function sendChatMessage(payloadOrQuestion, maybeHistory = [], maybeToken = null, maybeSessionId = null) {
+  const payload =
+    typeof payloadOrQuestion === "object" && payloadOrQuestion !== null
+      ? payloadOrQuestion
+      : {
+          question: String(payloadOrQuestion || ""),
+          history: Array.isArray(maybeHistory) ? maybeHistory : [],
+          token: maybeToken,
+          sessionId: maybeSessionId
+        };
+
+  const { token, question, history = [], sessionId = null } = payload;
   const res = await fetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
     headers: {

@@ -101,7 +101,10 @@ export default function MessageBubble({
               <ul className="source-list">
                 {citations.map((c, idx) => (
                   <li key={`${c.source || "source"}-${idx}`}>
-                    <strong>{c.source || "Source"}</strong>
+                    <strong>{c.title || c.source || "Source"}</strong>
+                    {c.source ? <span>{c.source}</span> : null}
+                    {c.topic ? <span>Topic: {c.topic}</span> : null}
+                    {c.url ? <span>{c.url}</span> : null}
                     {c.snippet ? <span>{c.snippet}</span> : null}
                   </li>
                 ))}
