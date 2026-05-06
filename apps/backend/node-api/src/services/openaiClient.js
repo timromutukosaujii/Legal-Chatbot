@@ -54,38 +54,55 @@ export async function generateEmbeddingsForChunks(chunks) {
       const emb = await generateEmbedding(chunk.text);
       if (emb) map.set(chunk.id, emb);
     } catch {
-      // Continue with best-effort; fallback retrieval still works.
+      // Best-effort only.
     }
   }
 
   return map;
 }
 
-export async function generateGroundedAnswer({ message, contextBlocks, safetyInstruction }) {
-  const apiKey = (process.env.OPENAI_API_KEY || "").trim();
-  if (!apiKey) {
-    return "I cannot answer confidently because the language model is not configured (missing OPENAI_API_KEY).";
-  }
+function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history }) {
+  const historyText = (history || [])
+    .slice(-6)
+    .map((h) => `${h.role === "assistant" ? "Assistant" : "User"}: ${h.text}`)
+    .join("\n");
 
-  const prompt = [
+  return [
     "You are a UK legal and human-rights information assistant.",
-    "Only answer from provided context blocks.",
-    "Do not provide personalised legal advice, legal strategy, case prediction, or professional recommendations.",
-    "If context is insufficient, say: I cannot answer confidently from the provided legal sources.",
-    safetyInstruction ? `Safety note: ${safetyInstruction}` : "",
+    "Use only the retrieved legal sources.",
+    "Do not use general model knowledge unless it is directly supported by the retrieved context.",
+    "Do not provide personalised legal advice.",
+    "Do not predict case outcomes.",
+    "Explain in plain English.",
+    "Cite the sources used.",
+    "If the retrieved context is insufficient, say you cannot answer confidently.",
+    "Use phrasing like 'In general' or 'The source states'.",
+    safetyInstruction ? `Safety instruction: ${safetyInstruction}` : "",
+    "",
+    historyText ? `Conversation so far:\n${historyText}` : "",
     "",
     "User question:",
     message,
     "",
-    "Retrieved context blocks:",
+    "Retrieved legal context:",
     contextBlocks.length ? contextBlocks.join("\n\n") : "(none)",
     "",
-    "Response format:",
-    "- A concise answer grounded only in context",
-    "- If uncertain, explicitly say so"
+    "Output requirements:",
+    "- concise factual answer",
+    "- no personal legal strategy",
+    "- no invented facts"
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+export async function generateGroundedAnswer({ message, contextBlocks, safetyInstruction, history = [] }) {
+  const apiKey = (process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) {
+    return "I could not find enough information in the legal knowledge base to answer this confidently.";
+  }
+
+  const prompt = buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history });
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -100,9 +117,21 @@ export async function generateGroundedAnswer({ message, contextBlocks, safetyIns
   });
 
   if (!response.ok) {
-    return "I cannot answer confidently from the provided legal sources.";
+    return "I could not find enough information in the legal knowledge base to answer this confidently.";
   }
 
   const payload = await response.json();
-  return extractResponseText(payload) || "I cannot answer confidently from the provided legal sources.";
+  return (
+    extractResponseText(payload) ||
+    "I could not find enough information in the legal knowledge base to answer this confidently."
+  );
+}
+
+export function createStreamChunks(text, chunkSize = 80) {
+  const value = String(text || "");
+  const chunks = [];
+  for (let i = 0; i < value.length; i += chunkSize) {
+    chunks.push(value.slice(i, i + chunkSize));
+  }
+  return chunks;
 }

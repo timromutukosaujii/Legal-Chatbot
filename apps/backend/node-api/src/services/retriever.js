@@ -53,22 +53,40 @@ export class Retriever {
     if (!this.chunks.length) return [];
 
     const scored = this.chunks.map((chunk) => {
-      let score = keywordScore(query, chunk.text);
+      const lexicalScore = keywordScore(query, chunk.text);
+      let semanticScore = 0;
+      let finalScore = lexicalScore;
 
       if (queryEmbedding && this.embeddingEnabled) {
         const chunkEmbedding = this.embeddings.get(chunk.id);
         if (chunkEmbedding) {
-          const semanticScore = cosineSimilarity(queryEmbedding, chunkEmbedding);
-          score = 0.65 * semanticScore + 0.35 * score;
+          semanticScore = cosineSimilarity(queryEmbedding, chunkEmbedding);
+          finalScore = 0.65 * semanticScore + 0.35 * lexicalScore;
         }
       }
 
       return {
         ...chunk,
-        score: Number(score.toFixed(4))
+        lexicalScore: Number(lexicalScore.toFixed(4)),
+        semanticScore: Number(semanticScore.toFixed(4)),
+        score: Number(finalScore.toFixed(4))
       };
     });
 
     return scored.sort((a, b) => b.score - a.score).slice(0, Number(topK) || 5);
   }
+}
+
+export function retrievalConfidence(chunks) {
+  if (!Array.isArray(chunks) || chunks.length === 0) return "low";
+  const avgScore = chunks.reduce((sum, chunk) => sum + Number(chunk?.score || 0), 0) / chunks.length;
+  if (avgScore >= 0.55) return "high";
+  if (avgScore >= 0.32) return "medium";
+  return "low";
+}
+
+export function hasSufficientSources(chunks) {
+  if (!Array.isArray(chunks) || chunks.length === 0) return false;
+  const topScore = Number(chunks[0]?.score || 0);
+  return topScore >= 0.22;
 }
