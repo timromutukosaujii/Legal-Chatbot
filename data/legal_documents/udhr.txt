@@ -1,0 +1,22 @@
+﻿Title: Universal Declaration of Human Rights (UDHR) - Plain-Language Overview
+Source: United Nations - UDHR
+URL: https://www.un.org/en/about-us/universal-declaration-of-human-rights
+Topic: Foundational Human Rights Principles
+
+The UDHR (1948) is a foundational international human-rights statement.
+It is not a UK statute, but it strongly influenced later human-rights instruments and legal thinking.
+
+Common principles include:
+- dignity and equality of all persons,
+- freedom from torture and degrading treatment,
+- fair hearing rights,
+- privacy and family life values,
+- freedom of thought, belief, and expression,
+- social and economic protections in broad terms.
+
+Educational role in this dataset:
+The UDHR helps provide conceptual background for understanding modern rights frameworks such as the ECHR and
+rights discourse in UK public law.
+
+Use note:
+For UK legal application, users should also consult UK legislation and official guidance.

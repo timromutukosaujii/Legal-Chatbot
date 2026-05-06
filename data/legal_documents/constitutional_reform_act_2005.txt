@@ -1,0 +1,23 @@
+﻿Title: Constitutional Reform Act 2005 - Plain-Language Overview
+Source: UK Public General Acts - Constitutional Reform Act 2005
+URL: https://www.legislation.gov.uk/ukpga/2005/4/contents
+Topic: UK Constitution and Separation of Powers
+
+This document summarizes key constitutional themes for educational RAG use.
+
+The Constitutional Reform Act 2005 is important because it reshaped institutional arrangements in the UK,
+including judicial independence and the role of top courts.
+
+Key themes:
+- Separation of powers: it clarifies distinctions between judiciary, executive, and legislature.
+- Judicial independence: public authorities, including ministers, must uphold judicial independence.
+- UK Supreme Court: the Act created the Supreme Court of the United Kingdom, replacing the appellate role
+  of the House of Lords.
+
+Why it matters:
+The Act is central to modern constitutional structure and to understanding rule-of-law safeguards in the UK.
+It is often discussed alongside human rights and constitutional accountability.
+
+Practical relevance:
+Questions about constitutional roles, legal checks on executive power, and court independence often connect
+to principles reflected in this Act.

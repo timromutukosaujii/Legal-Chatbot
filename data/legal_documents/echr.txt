@@ -1,0 +1,31 @@
+﻿Title: European Convention on Human Rights (ECHR) - Plain-Language Overview
+Source: Council of Europe - European Convention on Human Rights
+URL: https://www.echr.coe.int/
+Topic: International Human Rights Framework
+
+This file gives a plain-language overview of the ECHR for educational RAG use.
+The ECHR is an international treaty. UK law also reflects these rights through the Human Rights Act 1998.
+
+Purpose:
+The ECHR protects fundamental civil and political rights across member states of the Council of Europe.
+Individuals can apply to the European Court of Human Rights after exhausting domestic remedies.
+
+Key rights commonly referenced in UK legal discussion:
+- Article 2: right to life
+- Article 3: prohibition of torture and inhuman or degrading treatment
+- Article 5: liberty and security
+- Article 6: fair hearing by an independent tribunal
+- Article 8: private and family life, home and correspondence
+- Article 9: freedom of religion and belief
+- Article 10: freedom of expression
+- Article 11: assembly and association
+- Article 14: non-discrimination in enjoyment of Convention rights
+
+How balancing works:
+- Some rights are absolute and cannot be restricted (for example Article 3).
+- Some rights are qualified and can be limited by law if restrictions are necessary and proportionate.
+- Courts often apply a proportionality analysis when rights conflict.
+
+Why it matters in UK legal information:
+The ECHR framework shapes UK public law, especially in human-rights-sensitive issues involving state power,
+privacy, free expression, policing, detention, and fair process.

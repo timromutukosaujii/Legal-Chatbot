@@ -1,8 +1,0 @@
-﻿Tenancy types (private renting) — Overview (England)
-
-Summary (general information)
-- The most common private tenancy is an Assured Shorthold Tenancy (AST). A tenancy can be an AST if the property is private, the tenancy started on or after 15 January 1989, the property is the tenant’s main accommodation, and the landlord does not live in the property.
-- Tenancies that are not ASTs include excluded tenancies/licences (lodgers sharing facilities with a live‑in landlord), assured tenancies (typically 15 Jan 1989–27 Feb 1997), and regulated tenancies (before 15 Jan 1989) which give more protection from eviction.
-
-Source: https://www.gov.uk/private-renting-tenancy-agreements/tenancy-types
-Last accessed: 2026-03-25

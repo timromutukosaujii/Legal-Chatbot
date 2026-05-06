@@ -1,0 +1,39 @@
+﻿Title: Human Rights Act 1998 (Plain-Language Overview)
+Source: UK Public General Acts - Human Rights Act 1998
+URL: https://www.legislation.gov.uk/ukpga/1998/42/contents
+Topic: UK Constitutional and Human Rights Law
+
+This document is a plain-language summary for educational use.
+It explains core ideas from the Human Rights Act 1998 and is not a substitute for legal advice.
+
+The Human Rights Act 1998 (HRA) brings most rights from the European Convention on Human Rights (ECHR)
+into UK law. This means people can rely on these rights in UK courts without always going to the European
+Court of Human Rights in Strasbourg.
+
+Core points:
+- Public authorities (for example, councils, police, NHS bodies, and many government departments) must act
+  in a way that is compatible with Convention rights.
+- UK courts should interpret legislation, so far as possible, in a way compatible with Convention rights.
+- If a higher UK court finds that an Act of Parliament cannot be interpreted compatibly, it may issue a
+  declaration of incompatibility.
+- A declaration does not automatically cancel the law, but signals Parliament to consider change.
+
+Examples of protected rights often discussed in UK legal practice:
+- Article 2: right to life
+- Article 3: prohibition of torture and inhuman or degrading treatment
+- Article 5: right to liberty and security
+- Article 6: right to a fair trial
+- Article 8: right to respect for private and family life
+- Article 9: freedom of thought, conscience and religion
+- Article 10: freedom of expression
+- Article 11: freedom of assembly and association
+- Article 14: prohibition of discrimination in relation to Convention rights
+
+Limits and balancing:
+Some rights are absolute (for example Article 3), while others are qualified (for example Article 8 and
+Article 10). Qualified rights may be limited when the law allows it and when a limit is necessary and
+proportionate for a legitimate aim, such as public safety or protecting others' rights.
+
+In practice:
+The HRA is often used in judicial review and public law cases. It also influences day-to-day decisions by
+public bodies, encouraging rights-based decision-making and accountability.

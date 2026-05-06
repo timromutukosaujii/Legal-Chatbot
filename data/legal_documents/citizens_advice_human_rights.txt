@@ -1,0 +1,29 @@
+﻿Title: Citizens Advice - Human Rights Guidance (Plain-Language Notes)
+Source: Citizens Advice
+URL: https://www.citizensadvice.org.uk/
+Topic: Plain-Language Human Rights Guidance
+
+This file contains plain-language guidance notes inspired by public legal information style used by Citizens Advice.
+Use this as informational context and always verify details on official sources.
+
+Human-rights guidance for non-experts usually explains:
+- what a right means in everyday language,
+- when public bodies must respect rights,
+- what evidence may be useful,
+- where to get further support.
+
+Common practical themes:
+- You can raise human-rights concerns in complaints to public bodies.
+- Keep records of decisions, letters, and dates.
+- Ask public bodies to explain legal basis and proportionality when rights are limited.
+- Seek specialist advice where there is risk of serious harm, detention, housing loss, or family separation.
+
+Limitations:
+General information cannot replace professional advice on personal legal strategy.
+
+Support pathways often highlighted:
+- Citizens Advice services
+- law centres
+- legal aid guidance
+- official complaint procedures
+- ombudsman routes (where relevant)

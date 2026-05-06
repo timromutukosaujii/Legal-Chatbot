@@ -1,0 +1,46 @@
+﻿Title: Equality Act 2010 - Plain-Language Overview
+Source: UK Public General Acts - Equality Act 2010
+URL: https://www.legislation.gov.uk/ukpga/2010/15/contents
+Topic: Equality and Anti-Discrimination Law
+
+This is a plain-language educational summary.
+It explains high-level principles in the Equality Act 2010 for informational chatbot use.
+
+Main purpose:
+The Equality Act 2010 brings together major UK anti-discrimination rules into one framework.
+It protects people from unfair treatment based on protected characteristics.
+
+Protected characteristics include:
+- age
+- disability
+- gender reassignment
+- marriage and civil partnership (in specific contexts)
+- pregnancy and maternity
+- race
+- religion or belief
+- sex
+- sexual orientation
+
+Common legal concepts:
+- direct discrimination
+- indirect discrimination
+- harassment
+- victimisation
+
+Where protections apply:
+- work and recruitment
+- education
+- services and public functions
+- housing in many contexts
+- associations
+
+Public sector equality duty:
+Certain public bodies must have due regard to equality aims, including reducing disadvantage and fostering
+good relations.
+
+Reasonable adjustments:
+Employers and service providers may have duties to make reasonable adjustments for disabled people so they
+are not substantially disadvantaged.
+
+Scope note:
+This file is informational and not case-specific legal advice.
