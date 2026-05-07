@@ -1,20 +1,35 @@
-# Lawyer GPT (UK Legal Information Chatbot)
+# Lawyer GPT: UK Constitutional and Human-Rights Legal Assistant
 
-Lawyer GPT is a UK legal information chatbot that provides general legal information (not personalised legal advice). It retrieves relevant legal-document snippets and returns plain-language answers with citations.
+Lawyer GPT is a retrieval-augmented legal information assistant focused on UK constitutional and human-rights law.  
+It provides source-grounded explanations in plain English and does **not** provide personalised legal advice.
 
-## Features
+## Core Capabilities
 
-- React chat UI with conversation history
-- Node.js backend with retrieval + OpenAI generation
-- Domain-aware retrieval (tenancy, employment, immigration, human rights, general)
-- Safety refusal for personalised legal advice/case strategy
-- Citations, confidence, and retrieved chunks in API response
+- UK legal Q&A grounded in local legal text sources
+- Intent-aware conversation flow (`casual`, `assistant_meta`, `legal_question`, `unsafe_advice`)
+- Follow-up understanding for prompts like `summarize`, `explain it`, `bullet points`
+- Response style control (`concise`, `bullet`, `detailed`, `overview`)
+- Safety filtering for personalised legal-advice requests
+- Citation support with concise source cards
+- Modern responsive chat UI (light/dark mode, sidebar history, attachments)
+
+## Academic Contribution Summary
+
+This project demonstrates a practical applied AI pipeline combining:
+
+- pre-trained LLM generation,
+- retrieval-augmented generation (RAG),
+- domain restriction and scope control,
+- conversational memory and follow-up rewriting,
+- safety refusal behavior for advice-seeking prompts,
+- and source-grounded responses for explainability.
 
 ## Tech Stack
 
 - Frontend: React + Vite
-- Backend API + AI: Node.js + Express + OpenAI Responses API
-- Data source: `data/legal_documents/*.txt`
+- Backend: Node.js + Express
+- LLM + Embeddings: OpenAI Responses API + OpenAI Embeddings API
+- Knowledge base: local `.txt` legal documents in `data/legal_documents`
 
 ## Project Structure
 
@@ -22,92 +37,97 @@ Lawyer GPT is a UK legal information chatbot that provides general legal informa
 apps/
   frontend/react-chat-ui
   backend/node-api
-archive/legacy/ai-service (legacy, not required for current runtime)
 data/legal_documents
-docs/
-archive/legacy (backup only)
+docs
+archive/legacy (backup/legacy only)
 ```
 
-## Architecture
+## System Architecture
 
 ```text
 React Chat UI
-     |
-     | HTTP
-     v
-Node.js + Express API
-     |
-     |-- Local retrieval from data/legal_documents
-     |
-     '-- OpenAI answer generation + citations
+    |
+    | HTTP /api/chat
+    v
+Node API (Express)
+    |
+    |-- Intent + safety + follow-up handling
+    |-- Local retrieval over legal_documents
+    '-- OpenAI grounded answer generation
 ```
 
-## Safety & Disclaimer
+## Safety and Scope
 
-- Informational only (no personalised legal advice)
-- Refuses case-specific action guidance
-- Includes disclaimer text in answers
+- General legal information only
+- No personalised legal advice
+- No case-outcome prediction
+- Unsafe legal-advice prompts are handled with safe refusal + general guidance
+- Out-of-domain prompts are redirected as out-of-scope
 
-See `docs/ethics-safety.md` for policy context.
+For policy details, see [docs/ethics-safety.md](/c:/Sital/Chatbot/docs/ethics-safety.md).
 
 ## Run Locally (Windows PowerShell)
 
-### 1) Node API
+## 1) Start backend
 
 ```powershell
 cd C:\Sital\Chatbot\apps\backend\node-api
 npm install
-npm run dev
+node src/index.js
 ```
 
-Health check:
+Health endpoint:
 
-```text
-http://127.0.0.1:3001/health
-```
+`http://127.0.0.1:3001/health`
 
-Reload legal docs after edits/additions:
-
-```text
-POST http://127.0.0.1:3001/api/admin/reload-docs
-```
-
-### 2) Frontend
+## 2) Start frontend
 
 ```powershell
 cd C:\Sital\Chatbot\apps\frontend\react-chat-ui
 npm install
-npm run dev -- --host 0.0.0.0 --port 5173
+npm run dev -- --host 127.0.0.1 --port 5174
 ```
 
-Open:
+Frontend URL:
 
-- `http://127.0.0.1:5173`
+`http://127.0.0.1:5174`
+
+## 3) Update knowledge base docs
+
+Place or edit files in:
+
+`data/legal_documents`
+
+Then reload:
+
+- restart backend, or
+- call `POST /api/admin/reload-docs`
 
 ## Environment Variables
 
-- Frontend: `apps/frontend/react-chat-ui/.env.example`
-  - `VITE_BACKEND_NODE_URL=http://127.0.0.1:3001`
-- Node API: `apps/backend/node-api/.env.example`
-  - `PORT=3001`
-  - `LEGAL_DOCS_DIR=../../../data/legal_documents`
-  - `OPENAI_API_KEY=...` (required for OpenAI generation)
-  - `OPENAI_MODEL=gpt-4o-mini`
-  - `RAG_TOP_K=3`
-  - `RAG_MIN_RELEVANCE_SCORE=0.45`
+Frontend (`apps/frontend/react-chat-ui/.env`):
 
-## Knowledge Base
+- `VITE_BACKEND_NODE_URL=http://127.0.0.1:3001`
 
-Add public UK legal documents in:
+Backend (`apps/backend/node-api/.env`):
 
-```text
-data/legal_documents
-```
+- `PORT=3001`
+- `LEGAL_DOCS_DIR=../../../data/legal_documents`
+- `OPENAI_API_KEY=...`
+- `OPENAI_MODEL=gpt-4o-mini`
+- `OPENAI_EMBEDDING_MODEL=text-embedding-3-small`
+- `RAG_TOP_K=5`
+- `RAG_MIN_SIMILARITY=0.26`
 
-Restart Node API or call `/api/admin/reload-docs` after updates.
+## Demo Tips
 
-## Docs
+- Ask legal question: `What does Article 8 protect?`
+- Ask follow-up: `summarize` or `bullet points`
+- Ask assistant-meta: `How can you help me?`
+- Ask unsafe advice: `Should I sue my employer?`
 
-- Ethics & safety: `docs/ethics-safety.md`
-- Timeline: `docs/timeline.md`
-- Structure notes: `docs/project-structure.md`
+## Documentation
+
+- Ethics and safety: [docs/ethics-safety.md](/c:/Sital/Chatbot/docs/ethics-safety.md)
+- Timeline: [docs/timeline.md](/c:/Sital/Chatbot/docs/timeline.md)
+- Project structure: [docs/project-structure.md](/c:/Sital/Chatbot/docs/project-structure.md)
