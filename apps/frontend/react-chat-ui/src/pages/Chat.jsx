@@ -1,4 +1,4 @@
-import Navbar from "../components/Navbar";
+﻿import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import ChatBox from "../components/ChatBox";
 
@@ -15,7 +15,6 @@ export default function Chat({
   onConversationChange,
   onUsageUpdate,
   onOpenSettings,
-  onOpenSubscription,
   onUpgrade,
   onLogout,
   token
@@ -32,7 +31,6 @@ export default function Chat({
           onSelect={onSelectChat}
           onNewChat={onNewChat}
           onDelete={onDeleteChat}
-          onOpenSubscription={onOpenSubscription}
           onOpenSettings={onOpenSettings}
           onLogout={onLogout}
         />

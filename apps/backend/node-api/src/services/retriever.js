@@ -32,6 +32,27 @@ function keywordScore(query, text) {
   return overlap / qTokens.length;
 }
 
+function topicBoost(query, chunk) {
+  const q = String(query || "").toLowerCase();
+  const meta = `${chunk?.metadata?.title || ""} ${chunk?.metadata?.topic || ""}`.toLowerCase();
+  let boost = 0;
+
+  if (/\b(article\s*\d+|human rights|hra|echr|udhr)\b/i.test(q) && /\b(human rights|echr|hra|udhr|article)\b/i.test(meta)) {
+    boost += 0.08;
+  }
+  if (/\b(equality|discrimination)\b/i.test(q) && /\b(equality|discrimination)\b/i.test(meta)) {
+    boost += 0.08;
+  }
+  if (/\b(constitution|constitutional|magna carta|supreme court)\b/i.test(q) && /\b(constitution|constitutional|magna carta|supreme court)\b/i.test(meta)) {
+    boost += 0.08;
+  }
+  if (/\b(privacy|data protection|private life)\b/i.test(q) && /\b(privacy|data protection)\b/i.test(meta)) {
+    boost += 0.08;
+  }
+
+  return boost;
+}
+
 export class Retriever {
   constructor({ topK = 5 } = {}) {
     this.topK = Number(topK) || 5;
@@ -64,6 +85,8 @@ export class Retriever {
           finalScore = 0.65 * semanticScore + 0.35 * lexicalScore;
         }
       }
+
+      finalScore += topicBoost(query, chunk);
 
       return {
         ...chunk,

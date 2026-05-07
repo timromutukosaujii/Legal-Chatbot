@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
-
-const TERM_GLOSSARY = {
+﻿const TERM_GLOSSARY = {
   "Article 8": "Right to respect for private and family life.",
   "Article 10": "Right to freedom of expression.",
+  "Article 14": "Protection from discrimination in enjoyment of Convention rights.",
   "Human Rights Act": "UK law that gives effect to rights from the ECHR.",
   "Equality Act 2010": "UK law protecting people from discrimination.",
-  ILR: "Indefinite Leave to Remain, permanent settlement status."
+  ECHR: "European Convention on Human Rights.",
+  UDHR: "Universal Declaration of Human Rights."
 };
 
 function renderWithGlossary(text) {
@@ -26,43 +26,21 @@ function renderWithGlossary(text) {
   });
 }
 
-function getSmartSuggestions(answer) {
-  const lower = (answer || "").toLowerCase();
-  if (lower.includes("article") || lower.includes("human rights")) {
-    return ["What is Article 8?", "What does Article 14 cover?"];
-  }
-  if (lower.includes("tenant") || lower.includes("rent")) {
-    return ["What repairs must landlords provide?", "How much notice must a landlord give?"];
-  }
-  if (lower.includes("visa") || lower.includes("immigration")) {
-    return ["What is ILR?", "Can I switch visa type in the UK?"];
-  }
-  return ["What are my privacy rights?", "Where can I get official legal help?"];
-}
-
 export default function MessageBubble({
   role,
   text,
   time,
   citations = [],
-  confidence = "Low",
-  retrievedChunks = [],
+  confidence = "low",
   queryType,
+  scope,
+  safetyTriggered = false,
+  suggestedFollowUps = [],
   onSuggestionClick
 }) {
-  const [showWhy, setShowWhy] = useState(false);
   const isAssistant = role !== "user";
-  const hasEvidence = citations.length > 0 || retrievedChunks.length > 0 || Boolean(queryType);
+  const hasEvidence = citations.length > 0 || Boolean(queryType);
   const isIntroMessage = isAssistant && !hasEvidence;
-  const viewText = text;
-  const suggestions = useMemo(() => getSmartSuggestions(text), [text]);
-
-  const keyPoints = (viewText || "")
-    .split(/(?<=[.!?])\s+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  const showKeyPoints = keyPoints.length > 1 && (viewText || "").length > 140;
 
   return (
     <article className={`bubble ${role === "user" ? "user" : "assistant"}`}>
@@ -75,86 +53,58 @@ export default function MessageBubble({
         isIntroMessage ? (
           <p>{text}</p>
         ) : (
-        <div className="assistant-structured">
-          <p className="section-label">Answer</p>
-          <p>{renderWithGlossary(viewText)}</p>
+          <div className="assistant-structured">
+            <p className="section-label">Answer</p>
+            <p>{renderWithGlossary(text)}</p>
 
-          {showKeyPoints ? (
-            <>
-              <p className="section-label">Key points</p>
-              <ul className="source-list">
-                {keyPoints.map((point, idx) => (
-                  <li key={`${idx}-${point.slice(0, 24)}`}>{renderWithGlossary(point)}</li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+            <div className="meta-row">
+              <span className={`confidence confidence-${String(confidence || "low").toLowerCase()}`}>
+                Confidence: {confidence}
+              </span>
+              {safetyTriggered ? <span className="query-type">Safety: triggered</span> : null}
+            </div>
 
-          <div className="meta-row">
-            <span className={`confidence confidence-${(confidence || "Low").toLowerCase()}`}>Confidence: {confidence || "Low"}</span>
-            {queryType ? <span className="query-type">Type: {queryType.replace("_", " ")}</span> : null}
-          </div>
+            {citations.length ? (
+              <>
+                <p className="section-label">Sources</p>
+                <ul className="source-list">
+                  {citations.map((c, idx) => (
+                    <li key={`${c.source || "source"}-${idx}`} className="source-card">
+                      <strong>{c.title || c.source || "Source"}</strong>
+                      {c.source ? <span>Source: {c.source}</span> : null}
+                      {c.topic ? <span>Topic: {c.topic}</span> : null}
+                      {typeof c.score === "number" ? <span>Relevance score: {c.score.toFixed(3)}</span> : null}
+                      {c.whyUsed ? <span>Why used: {c.whyUsed}</span> : null}
+                      {c.url ? (
+                        <a href={c.url} target="_blank" rel="noreferrer">
+                          View Source
+                        </a>
+                      ) : null}
+                      {c.snippet ? <span>{c.snippet}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
 
-          {citations.length ? (
-            <>
-              <p className="section-label">Sources</p>
-              <ul className="source-list">
-                {citations.map((c, idx) => (
-                  <li key={`${c.source || "source"}-${idx}`}>
-                    <strong>{c.title || c.source || "Source"}</strong>
-                    {c.source ? <span>{c.source}</span> : null}
-                    {c.topic ? <span>Topic: {c.topic}</span> : null}
-                    {c.url ? <span>{c.url}</span> : null}
-                    {c.snippet ? <span>{c.snippet}</span> : null}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-
-          {retrievedChunks.length ? (
-            <>
-              <button type="button" className="why-toggle" onClick={() => setShowWhy((prev) => !prev)}>
-                {showWhy ? "Hide reasoning" : "Show reasoning"}
-              </button>
-
-              {showWhy ? (
-                <div className="why-panel">
-                  <p className="section-label">Retrieved chunks</p>
-                  <ul className="chunk-list">
-                    {retrievedChunks.map((chunk, idx) => (
-                      <li key={`${chunk.source || "chunk"}-${idx}`}>
-                        <div>
-                          <strong>{chunk.source || "Chunk"}</strong>
-                          <span className="chunk-score">score {(Number(chunk.score) || 0).toFixed(3)}</span>
-                        </div>
-                        <p>{chunk.snippet}</p>
-                      </li>
-                    ))}
-                  </ul>
+            {Array.isArray(suggestedFollowUps) && suggestedFollowUps.length ? (
+              <>
+                <p className="section-label">You might also ask</p>
+                <div className="suggestions">
+                  {suggestedFollowUps.slice(0, 3).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className="suggestion"
+                      onClick={() => onSuggestionClick?.(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
                 </div>
-              ) : null}
-            </>
-          ) : null}
-
-          {onSuggestionClick ? (
-            <>
-              <p className="section-label">You might also ask</p>
-              <div className="suggestions">
-                {suggestions.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className="suggestion"
-                    onClick={() => onSuggestionClick?.(item)}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
-        </div>
+              </>
+            ) : null}
+          </div>
         )
       ) : (
         <p>{text}</p>

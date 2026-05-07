@@ -1,21 +1,38 @@
+﻿const KB_ITEMS = [
+  "Human Rights Act 1998",
+  "ECHR",
+  "Equality Act 2010",
+  "Data Protection Act 2018",
+  "UDHR",
+  "EHRC Guidance"
+];
+
 export default function Sidebar({
   conversations,
   activeId,
   onSelect,
   onNewChat,
   onDelete,
-  onOpenSubscription,
   onOpenSettings,
   onLogout
 }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <h1>Lawyer GPT</h1>
-        <p>Legal AI Assistant</p>
+        <h1>UK Rights Assistant</h1>
+        <p>Constitutional + Human Rights RAG</p>
       </div>
 
       <button className="new-chat" type="button" onClick={onNewChat}>+ New Chat</button>
+
+      <div className="kb-panel">
+        <h3>Knowledge Base</h3>
+        <ul>
+          {KB_ITEMS.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
 
       <div className="chat-history">
         <h3>Chat History</h3>
@@ -35,7 +52,6 @@ export default function Sidebar({
       <div className="sidebar-divider" />
 
       <div className="sidebar-actions">
-        <button type="button" className="ghost sidebar-btn" onClick={onOpenSubscription}>Subscription</button>
         <button type="button" className="ghost sidebar-btn" onClick={onOpenSettings}>Settings</button>
         <button type="button" className="ghost sidebar-btn" onClick={onLogout}>Logout</button>
       </div>

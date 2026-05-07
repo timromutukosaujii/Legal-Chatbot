@@ -1,4 +1,4 @@
-const API_BASE_URL =
+﻿const API_BASE_URL =
   import.meta.env.VITE_BACKEND_NODE_URL ||
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:3001";
@@ -29,17 +29,33 @@ export async function sendChatMessage(payloadOrQuestion, maybeHistory = [], mayb
           question: String(payloadOrQuestion || ""),
           history: Array.isArray(maybeHistory) ? maybeHistory : [],
           token: maybeToken,
-          sessionId: maybeSessionId
+          conversationId: maybeSessionId
         };
 
-  const { token, question, history = [], sessionId = null } = payload;
+  const {
+    token,
+    question,
+    message,
+    history = [],
+    sessionId = null,
+    conversationId = null,
+    stream = false
+  } = payload;
+
+  const body = {
+    message: String(message || question || ""),
+    history,
+    stream,
+    conversationId: conversationId || sessionId || null
+  };
+
   const res = await fetch(`${API_BASE_URL}/api/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(token)
     },
-    body: JSON.stringify({ question, history, sessionId })
+    body: JSON.stringify(body)
   });
 
   return parseResponse(res);

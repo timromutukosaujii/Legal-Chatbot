@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import ChatPage from "./pages/Chat";
 import Login from "./pages/Login";
@@ -22,7 +22,7 @@ function createConversation() {
     messages: [
       {
         role: "assistant",
-        text: "Hello! I can help explain UK human rights, visas, and legal protections in simple terms.",
+        text: "Hello! I can help explain UK constitutional and human-rights law in simple terms, with source-based answers.",
         citations: [],
         confidence: "Low",
         retrievedChunks: []

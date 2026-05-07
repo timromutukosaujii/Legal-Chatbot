@@ -61,7 +61,7 @@ export async function generateEmbeddingsForChunks(chunks) {
   return map;
 }
 
-function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history }) {
+function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history, confidence, reasoning }) {
   const historyText = (history || [])
     .slice(-6)
     .map((h) => `${h.role === "assistant" ? "Assistant" : "User"}: ${h.text}`)
@@ -77,7 +77,11 @@ function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, histor
     "Cite the sources used.",
     "If the retrieved context is insufficient, say you cannot answer confidently.",
     "Use phrasing like 'In general' or 'The source states'.",
+    "Keep answers concise, simple, and natural for non-experts.",
+    "Return a single clear answer paragraph unless bullets are truly needed.",
     safetyInstruction ? `Safety instruction: ${safetyInstruction}` : "",
+    confidence ? `Retrieval confidence: ${confidence}` : "",
+    reasoning ? `Retrieval reasoning: ${JSON.stringify(reasoning)}` : "",
     "",
     historyText ? `Conversation so far:\n${historyText}` : "",
     "",
@@ -96,13 +100,27 @@ function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, histor
     .join("\n");
 }
 
-export async function generateGroundedAnswer({ message, contextBlocks, safetyInstruction, history = [] }) {
+export async function generateGroundedAnswer({
+  message,
+  contextBlocks,
+  safetyInstruction,
+  history = [],
+  confidence = null,
+  reasoning = null
+}) {
   const apiKey = (process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) {
     return "I could not find enough information in the legal knowledge base to answer this confidently.";
   }
 
-  const prompt = buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history });
+  const prompt = buildGroundedPrompt({
+    message,
+    contextBlocks,
+    safetyInstruction,
+    history,
+    confidence,
+    reasoning
+  });
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",

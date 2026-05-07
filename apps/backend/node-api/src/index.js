@@ -44,6 +44,7 @@ const RAG_CHUNK_OVERLAP_WORDS = Number(process.env.RAG_CHUNK_OVERLAP_WORDS || 80
 
 const INSUFFICIENT_SOURCES_MESSAGE =
   "I could not find enough information in the legal knowledge base to answer this confidently.";
+const MIN_SIMILARITY_THRESHOLD = Number(process.env.RAG_MIN_SIMILARITY || 0.26);
 
 const state = {
   docsWarning: null,
@@ -121,6 +122,119 @@ function buildFollowUps(retrievedChunks) {
   ];
 }
 
+function detectQueryTopics(question) {
+  const q = String(question || "").toLowerCase();
+  const topics = new Set();
+
+  if (/\b(article\s*\d+|human rights|hra|echr|udhr)\b/i.test(q)) topics.add("human_rights");
+  if (/\b(equality|discrimination)\b/i.test(q)) topics.add("equality");
+  if (/\b(constitution|constitutional|separation of powers|supreme court|magna carta)\b/i.test(q)) {
+    topics.add("constitutional");
+  }
+  if (/\b(privacy|data protection|private life)\b/i.test(q)) topics.add("privacy");
+
+  return topics;
+}
+
+function topicLabelForChunk(chunk) {
+  const meta = `${chunk?.metadata?.title || ""} ${chunk?.metadata?.topic || ""}`.toLowerCase();
+  if (/\b(equality|discrimination)\b/i.test(meta)) return "equality";
+  if (/\b(constitution|constitutional|separation of powers|supreme court|magna carta)\b/i.test(meta)) {
+    return "constitutional";
+  }
+  if (/\b(privacy|data protection|uk gdpr)\b/i.test(meta)) return "privacy";
+  if (/\b(human rights|hra|echr|udhr|article)\b/i.test(meta)) return "human_rights";
+  return "general";
+}
+
+function chunkMatchesTopics(chunk, topics) {
+  if (!topics.size) return true;
+  const metaText = `${chunk?.metadata?.title || ""} ${chunk?.metadata?.topic || ""}`.toLowerCase();
+
+  if (topics.has("human_rights")) {
+    if (/\b(human rights|hra|echr|udhr|article)\b/i.test(metaText)) return true;
+  }
+  if (topics.has("equality")) {
+    if (/\b(equality|discrimination)\b/i.test(metaText)) return true;
+  }
+  if (topics.has("constitutional")) {
+    if (/\b(constitution|constitutional|separation of powers|supreme court|magna carta)\b/i.test(metaText)) return true;
+  }
+  if (topics.has("privacy")) {
+    if (/\b(privacy|data protection)\b/i.test(metaText)) return true;
+  }
+  return false;
+}
+
+function filterRetrievedChunks(chunks, question) {
+  if (!Array.isArray(chunks) || chunks.length === 0) return [];
+  const topics = detectQueryTopics(question);
+  const topScore = Number(chunks[0]?.score || 0);
+  const minScore = Math.max(MIN_SIMILARITY_THRESHOLD, topScore * 0.74);
+  const strictEqualityOnly = topics.size === 1 && topics.has("equality");
+  const allowPrivacy = topics.has("privacy");
+
+  const filtered = chunks.filter((chunk) => {
+    const scoreOk = Number(chunk?.score || 0) >= minScore;
+    const topicOk = chunkMatchesTopics(chunk, topics);
+    if (!scoreOk || !topicOk) return false;
+    const label = topicLabelForChunk(chunk);
+    // Hard exclusion: prevent privacy/data-protection sources from leaking into non-privacy answers.
+    if (!allowPrivacy && label === "privacy") return false;
+    if (strictEqualityOnly) {
+      const meta = `${chunk?.metadata?.title || ""} ${chunk?.metadata?.topic || ""}`.toLowerCase();
+      return /\b(equality|discrimination)\b/i.test(meta);
+    }
+    return true;
+  });
+
+  // Keep system resilient for narrow questions without re-introducing noisy sources.
+  if (filtered.length > 0) return filtered;
+  return chunks
+    .filter((chunk) => Number(chunk?.score || 0) >= minScore)
+    .filter((chunk) => (allowPrivacy ? true : topicLabelForChunk(chunk) !== "privacy"))
+    .slice(0, 1);
+}
+
+function buildReasoning({ chunks, confidence, question }) {
+  const topTopics = [...new Set((chunks || []).map((c) => c?.metadata?.title).filter(Boolean))].slice(0, 3);
+  let confidenceReason = "weak or insufficient retrieval support";
+
+  if (confidence === "high") {
+    confidenceReason = "multiple strong legal matches retrieved with consistent topic alignment";
+  } else if (confidence === "medium") {
+    confidenceReason = "partially strong retrieval support from relevant legal materials";
+  }
+
+  return {
+    retrievalMatches: Array.isArray(chunks) ? chunks.length : 0,
+    topTopics,
+    confidenceReason,
+    queryTopics: [...detectQueryTopics(question)],
+    minSimilarityThreshold: MIN_SIMILARITY_THRESHOLD
+  };
+}
+
+function formatAnswerForReadability(answer) {
+  const text = String(answer || "").trim();
+  if (!text) return text;
+  return text
+    .replace(/\b\d\)\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function polishAnswerText(answer) {
+  let text = String(answer || "").trim();
+  if (!text) return text;
+  text = text.replace(/\s+/g, " ");
+  text = text.replace(/\butilize\b/gi, "use");
+  text = text.replace(/\bpersonalized\b/gi, "personalised");
+  text = text.replace(/\blegal info\b/gi, "legal information");
+  return text;
+}
+
 function makeResponse({
   conversationId,
   answer,
@@ -130,7 +244,8 @@ function makeResponse({
   scope,
   answerType,
   safetyTriggered,
-  suggestedFollowUps
+  suggestedFollowUps,
+  reasoning = null
 }) {
   return {
     conversationId,
@@ -142,6 +257,7 @@ function makeResponse({
     answerType,
     safetyTriggered,
     suggestedFollowUps,
+    reasoning,
     // Legacy compatibility for existing frontend components
     retrieved_chunks: retrievedChunks,
     query_type: answerType,
@@ -256,10 +372,11 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const retrievedRaw = state.retriever.retrieve(message, topK, queryEmbedding);
-    const sufficient = hasSufficientSources(retrievedRaw);
-    const confidence = retrievalConfidence(retrievedRaw);
+    const retrievedFiltered = filterRetrievedChunks(retrievedRaw, message);
+    const sufficient = hasSufficientSources(retrievedFiltered);
+    const confidence = retrievalConfidence(retrievedFiltered);
 
-    const retrievedChunks = retrievedRaw.map((chunk) => ({
+    const retrievedChunks = retrievedFiltered.map((chunk) => ({
       source: chunk?.metadata?.source || chunk?.metadata?.title || "Unknown source",
       snippet: String(chunk?.text || "").slice(0, 260),
       score: chunk.score,
@@ -267,7 +384,12 @@ app.post("/api/chat", async (req, res) => {
       metadata: chunk.metadata
     }));
 
-    const citations = buildCitations(retrievedRaw);
+    const citations = buildCitations(retrievedFiltered);
+    const reasoning = buildReasoning({
+      chunks: retrievedFiltered,
+      confidence,
+      question: message
+    });
 
     if (!sufficient) {
       const payload = makeResponse({
@@ -279,7 +401,8 @@ app.post("/api/chat", async (req, res) => {
         scope: "in_scope",
         answerType: "insufficient_sources",
         safetyTriggered,
-        suggestedFollowUps: buildFollowUps(retrievedRaw)
+        suggestedFollowUps: buildFollowUps(retrievedFiltered),
+        reasoning
       });
       logComparisonEvent({
         question: message,
@@ -292,17 +415,21 @@ app.post("/api/chat", async (req, res) => {
       return stream ? sendStreamedResponse(res, payload) : res.json(payload);
     }
 
-    const contextBlocks = formatContextBlocks(retrievedRaw);
+    const contextBlocks = formatContextBlocks(retrievedFiltered);
     const memory = sanitizeHistoryForPrompt(getConversation(conversationId));
 
     let answer = await generateGroundedAnswer({
       message,
       contextBlocks,
       safetyInstruction: safetyTriggered ? ADVICE_DISCLAIMER : "",
-      history: memory
+      history: memory,
+      confidence,
+      reasoning
     });
 
     answer = toGeneralInfoStyle(answer);
+    answer = formatAnswerForReadability(answer);
+    answer = polishAnswerText(answer);
 
     if (safetyTriggered) {
       answer = `In general, the source states:\n${answer}\n\n${ADVICE_DISCLAIMER}`;
@@ -324,7 +451,8 @@ app.post("/api/chat", async (req, res) => {
       scope: "in_scope",
       answerType,
       safetyTriggered,
-      suggestedFollowUps: buildFollowUps(retrievedRaw)
+      suggestedFollowUps: buildFollowUps(retrievedFiltered),
+      reasoning
     });
 
     appendConversation(conversationId, message, answer);
