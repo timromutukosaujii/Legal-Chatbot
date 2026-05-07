@@ -1,10 +1,10 @@
-﻿import Navbar from "../components/Navbar";
+import { useState } from "react";
+import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import ChatBox from "../components/ChatBox";
 
 export default function Chat({
-  user,
-  usage,
+  theme,
   conversations,
   activeId,
   notice,
@@ -14,25 +14,35 @@ export default function Chat({
   onDeleteChat,
   onConversationChange,
   onUsageUpdate,
-  onOpenSettings,
-  onUpgrade,
+  onToggleTheme,
   onLogout,
   token
 }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [featurePromptToken, setFeaturePromptToken] = useState(0);
   const activeConversation = conversations.find((c) => c.id === activeId) || conversations[0];
 
   return (
     <main className="page">
-      <Navbar user={user} usage={usage} onOpenProfile={onOpenSettings} onUpgrade={onUpgrade} />
+      <Navbar
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+      />
       <section className="app-shell">
         <Sidebar
+          open={sidebarOpen}
           conversations={conversations}
           activeId={activeConversation?.id}
           onSelect={onSelectChat}
           onNewChat={onNewChat}
+          onFeatures={() => {
+            setFeaturePromptToken(Date.now());
+            setSidebarOpen(false);
+          }}
           onDelete={onDeleteChat}
-          onOpenSettings={onOpenSettings}
           onLogout={onLogout}
+          onClose={() => setSidebarOpen(false)}
         />
         <section className="main-panel">
           {activeConversation ? (
@@ -43,6 +53,7 @@ export default function Chat({
               onUsageUpdate={onUsageUpdate}
               notice={notice}
               setNotice={setNotice}
+              featurePromptToken={featurePromptToken}
             />
           ) : null}
         </section>
@@ -50,3 +61,5 @@ export default function Chat({
     </main>
   );
 }
+
+

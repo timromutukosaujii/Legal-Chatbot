@@ -4,7 +4,6 @@ import ChatPage from "./pages/Chat";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Settings from "./pages/Settings";
-import Subscription from "./pages/Subscription";
 import { deleteConversation, fetchConversations, saveConversation } from "./services/api";
 import { getMe, getStoredToken, setStoredToken, updatePlan } from "./services/auth";
 
@@ -230,6 +229,7 @@ export default function App() {
   const chatElement = (
     <ChatPage
       token={token}
+      theme={theme}
       user={user || GUEST_USER}
       usage={usage}
       conversations={conversations}
@@ -250,9 +250,7 @@ export default function App() {
       }}
       onDeleteChat={onDeleteChat}
       onConversationChange={onConversationChange}
-      onOpenSettings={() => (token ? navigate("/settings") : navigate("/login"))}
-      onOpenSubscription={() => (token ? navigate("/subscription") : navigate("/login"))}
-      onUpgrade={() => onSetPlan("pro")}
+      onToggleTheme={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
       onLogout={onLogout}
       isGuest={isGuest}
       onLogin={() => navigate("/login")}
@@ -278,22 +276,6 @@ export default function App() {
               onModelChange={setModel}
               onSetPlan={onSetPlan}
               onClearHistory={clearHistory}
-              onNavigateSubscription={() => navigate("/subscription")}
-              onNavigateChat={() => navigate("/chat")}
-            />
-          ) : (
-            <Navigate to="/chat" replace />
-          )
-        }
-      />
-      <Route
-        path="/subscription"
-        element={
-          isAuthenticated ? (
-            <Subscription
-              user={user}
-              usage={usage}
-              onSetPlan={onSetPlan}
               onNavigateChat={() => navigate("/chat")}
             />
           ) : (

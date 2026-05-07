@@ -21,6 +21,11 @@ import {
 } from "./services/safety.js";
 import { buildCitations, formatContextBlocks } from "./services/citations.js";
 import { checkScope, OUT_OF_SCOPE_MESSAGE } from "./services/scopeChecker.js";
+import { classifyIntent } from "./services/intentClassifier.js";
+import { detectResponseStyle } from "./services/responseStyle.js";
+import { detectFollowUpIntent } from "./services/followupDetector.js";
+import { buildSafetyResponse } from "./services/safetyResponses.js";
+import { buildAssistantMetaResponse } from "./services/metaIntentHandler.js";
 import {
   appendChatHistory,
   appendConversation,
@@ -51,7 +56,8 @@ const state = {
   documents: [],
   chunks: [],
   retriever: new Retriever({ topK: RAG_TOP_K }),
-  embeddingsEnabled: false
+  embeddingsEnabled: false,
+  retrievalCache: new Map()
 };
 
 async function rebuildKnowledgeBase() {
@@ -99,9 +105,17 @@ function buildFollowUps(retrievedChunks) {
     .join(" ")
     .toLowerCase();
 
+  if (topicText.includes("human rights") || topicText.includes("echr") || topicText.includes("article")) {
+    return [
+      "When can Article 8 be limited by public authorities?",
+      "How does Article 14 work with other Convention rights?",
+      "Where can I read the official ECHR source?"
+    ];
+  }
+
   if (topicText.includes("equality") || topicText.includes("discrimination")) {
     return [
-      "In general, what counts as direct discrimination under the Equality Act 2010?",
+      "What counts as direct discrimination under the Equality Act 2010?",
       "What is the difference between direct and indirect discrimination?",
       "Where can I read the official Equality Act source?"
     ];
@@ -109,7 +123,7 @@ function buildFollowUps(retrievedChunks) {
 
   if (topicText.includes("constitutional") || topicText.includes("magna carta")) {
     return [
-      "In general, what is judicial independence in the UK system?",
+      "What is judicial independence in the UK system?",
       "How did the Constitutional Reform Act 2005 change the Supreme Court structure?",
       "Where can I read the official constitutional source?"
     ];
@@ -219,7 +233,8 @@ function formatAnswerForReadability(answer) {
   const text = String(answer || "").trim();
   if (!text) return text;
   return text
-    .replace(/\b\d\)\s*/g, "")
+    .replace(/\s*-\s+\*\*/g, "\n- **")
+    .replace(/\s*-\s+/g, "\n- ")
     .replace(/\s{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -228,11 +243,134 @@ function formatAnswerForReadability(answer) {
 function polishAnswerText(answer) {
   let text = String(answer || "").trim();
   if (!text) return text;
-  text = text.replace(/\s+/g, " ");
+  text = text
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n");
   text = text.replace(/\butilize\b/gi, "use");
   text = text.replace(/\bpersonalized\b/gi, "personalised");
   text = text.replace(/\blegal info\b/gi, "legal information");
   return text;
+}
+
+function normalizeBulletAnswer(answer) {
+  const text = String(answer || "").trim();
+  if (!text) return text;
+  return text
+    .replace(/\s+-\s+/g, "\n- ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function stripInlineUrls(answer) {
+  const text = String(answer || "").trim();
+  if (!text) return text;
+  return text
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi, "$1")
+    .replace(/https?:\/\/[^\s)]+/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function normalizeUserMessage(message) {
+  return String(message || "")
+    .replace(/\bartical\b/gi, "article")
+    .replace(/\bsummarixed\b/gi, "summarized")
+    .trim();
+}
+
+function isSmallTalk(message) {
+  const text = String(message || "").trim().toLowerCase();
+  if (!text) return false;
+  return /^(hi|hello|hey|yo|how are you|how are u|good morning|good afternoon|good evening)\b/.test(text);
+}
+
+function hasAssistantIntroduced(conversationId) {
+  const history = getConversation(conversationId);
+  if (!Array.isArray(history) || history.length === 0) return false;
+  return history.some((turn) => turn?.role === "assistant" && String(turn?.text || "").trim().length > 0);
+}
+
+function buildCasualGreeting(message, { assistantIntroduced = false } = {}) {
+  const text = String(message || "").trim().toLowerCase();
+  if (/\bhow are you\b|\bhow are u\b/.test(text)) {
+    return assistantIntroduced
+      ? "I'm doing well, thanks. How can I help?"
+      : "I'm doing well, thanks. I can help explain UK human-rights and constitutional law.";
+  }
+  if (/\bgood morning\b/.test(text)) {
+    return assistantIntroduced
+      ? "Good morning. How can I help?"
+      : "Good morning. I can help explain UK human-rights and constitutional law.";
+  }
+  if (/\bgood afternoon\b/.test(text)) {
+    return assistantIntroduced
+      ? "Good afternoon. How can I help?"
+      : "Good afternoon. I can help explain UK human-rights and constitutional law.";
+  }
+  if (/\bgood evening\b/.test(text)) {
+    return assistantIntroduced
+      ? "Good evening. How can I help?"
+      : "Good evening. I can help explain UK human-rights and constitutional law.";
+  }
+  if (/\bthanks\b|\bthank you\b/.test(text)) {
+    return "You're welcome.";
+  }
+  if (/\bhello\b|\bhey\b|\byo\b|\bhi\b/.test(text)) {
+    return assistantIntroduced
+      ? "Hi. How can I help?"
+      : "Hi. I can help explain UK human-rights and constitutional law.";
+  }
+  return assistantIntroduced ? "How can I help?" : "Hi. I can help explain UK human-rights and constitutional law.";
+}
+
+function findRecentUserLegalQuestion(conversationId) {
+  const history = getConversation(conversationId);
+  if (!Array.isArray(history) || history.length === 0) return "";
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const turn = history[i];
+    if (turn?.role !== "user") continue;
+    const text = String(turn?.text || "").trim();
+    if (!text) continue;
+    if (detectFollowUpIntent(text).isFollowUp || isSmallTalk(text)) continue;
+    if (checkScope(text).inScope) return text;
+  }
+  return "";
+}
+
+function hasRecentInScopeContext(conversationId) {
+  const history = getConversation(conversationId);
+  if (!Array.isArray(history) || history.length === 0) return false;
+  const recent = history.slice(-6).map((h) => String(h?.text || "").toLowerCase()).join(" ");
+  return /\b(human rights|echr|hra|article\s*\d+|equality|constitutional|uk law|court|judicial)\b/.test(recent);
+}
+
+function isAssistantMetaQuery(message) {
+  const text = String(message || "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return false;
+  const phrases = [
+    "what can you do",
+    "what do you do",
+    "how can you help me",
+    "how can you help",
+    "tell me about your features",
+    "tell me about features",
+    "what are your capabilities",
+    "how does this work",
+    "how does this chatbot work",
+    "how does this assistant work",
+    "how do you work",
+    "what sources do you use",
+    "what laws do you cover",
+    "are you based on chatgpt",
+    "who are you"
+  ];
+  return phrases.some((p) => text.includes(p));
 }
 
 function makeResponse({
@@ -281,6 +419,30 @@ function sendStreamedResponse(res, payload) {
   res.end();
 }
 
+function buildAttachmentContextBlocks(attachments) {
+  if (!Array.isArray(attachments) || attachments.length === 0) return [];
+  const blocks = [];
+  attachments.slice(0, 6).forEach((a, idx) => {
+    const name = String(a?.name || `attachment-${idx + 1}`);
+    const type = String(a?.type || "application/octet-stream");
+    const size = Number(a?.size || 0);
+    const text = String(a?.text || "").trim();
+    const lines = [
+      `[Attachment ${idx + 1}]`,
+      `Name: ${name}`,
+      `Type: ${type}`,
+      `Size: ${size} bytes`
+    ];
+    if (text) {
+      lines.push(`Text excerpt: ${text.slice(0, 4000)}`);
+    } else {
+      lines.push("Text excerpt: (not available for this file type)");
+    }
+    blocks.push(lines.join("\n"));
+  });
+  return blocks;
+}
+
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
@@ -306,16 +468,100 @@ app.post("/api/admin/reload-docs", async (_req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   const message = String(req.body?.message || req.body?.question || "").trim();
+  const normalizedMessage = normalizeUserMessage(message);
   const conversationId = String(req.body?.conversationId || crypto.randomUUID());
   const topK = Number(req.body?.topK || RAG_TOP_K);
   const stream = Boolean(req.body?.stream);
+  const attachments = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
 
   if (!message) {
     return res.status(400).json({ error: "`message` is required." });
   }
 
+  // Hard guard for assistant-capability prompts so they never fall into out-of-scope.
+  if (isAssistantMetaQuery(normalizedMessage)) {
+    const answer = buildAssistantMetaResponse();
+    const payload = makeResponse({
+      conversationId,
+      answer,
+      citations: [],
+      retrievedChunks: [],
+      confidence: null,
+      scope: "in_scope",
+      answerType: "assistant_meta",
+      safetyTriggered: false,
+      suggestedFollowUps: []
+    });
+    appendConversation(conversationId, message, answer);
+    return stream ? sendStreamedResponse(res, payload) : res.json(payload);
+  }
+
   try {
-    const scopeCheck = checkScope(message);
+    const { intent: classifiedIntent } = classifyIntent(normalizedMessage);
+    const intent = isAssistantMetaQuery(normalizedMessage) ? "assistant_meta" : classifiedIntent;
+    const responseStyle = detectResponseStyle(normalizedMessage);
+    const { isFollowUp } = detectFollowUpIntent(normalizedMessage);
+
+    if (intent === "casual") {
+      const assistantIntroduced = hasAssistantIntroduced(conversationId);
+      const answer = buildCasualGreeting(normalizedMessage, { assistantIntroduced });
+      const payload = makeResponse({
+        conversationId,
+        answer,
+        citations: [],
+        retrievedChunks: [],
+        confidence: null,
+        scope: "in_scope",
+        answerType: "casual",
+        safetyTriggered: false,
+        suggestedFollowUps: []
+      });
+      appendConversation(conversationId, message, answer);
+      return stream ? sendStreamedResponse(res, payload) : res.json(payload);
+    }
+
+    if (intent === "unsafe_advice") {
+      const safety = buildSafetyResponse(normalizedMessage);
+      const payload = makeResponse({
+        conversationId,
+        answer: safety.answer,
+        citations: [],
+        retrievedChunks: [],
+        confidence: null,
+        scope: "in_scope",
+        answerType: safety.answerType,
+        safetyTriggered: true,
+        suggestedFollowUps: []
+      });
+      return stream ? sendStreamedResponse(res, payload) : res.json(payload);
+    }
+
+    if (intent === "assistant_meta") {
+      const answer = buildAssistantMetaResponse();
+      const payload = makeResponse({
+        conversationId,
+        answer,
+        citations: [],
+        retrievedChunks: [],
+        confidence: null,
+        scope: "in_scope",
+        answerType: "assistant_meta",
+        safetyTriggered: false,
+        suggestedFollowUps: []
+      });
+      appendConversation(conversationId, message, answer);
+      return stream ? sendStreamedResponse(res, payload) : res.json(payload);
+    }
+
+    const initialScopeCheck = checkScope(normalizedMessage);
+    const followUpContextOverride =
+      !initialScopeCheck.inScope &&
+      isFollowUp &&
+      hasRecentInScopeContext(conversationId);
+
+    const scopeCheck = followUpContextOverride
+      ? { scope: "in_scope", inScope: true, reason: "contextual_follow_up" }
+      : initialScopeCheck;
     const safetyTriggered = detectPersonalAdviceRequest(message);
 
     if (!scopeCheck.inScope) {
@@ -364,19 +610,32 @@ app.post("/api/chat", async (req, res) => {
       return stream ? sendStreamedResponse(res, payload) : res.json(payload);
     }
 
+    const effectiveMessage = followUpContextOverride
+      ? `${findRecentUserLegalQuestion(conversationId)}\n\nFollow-up request: ${normalizedMessage}`.trim()
+      : normalizedMessage;
+
     let queryEmbedding = null;
     try {
-      queryEmbedding = await generateEmbedding(message);
+      queryEmbedding = await generateEmbedding(effectiveMessage);
     } catch {
       queryEmbedding = null;
     }
 
-    const retrievedRaw = state.retriever.retrieve(message, topK, queryEmbedding);
-    const retrievedFiltered = filterRetrievedChunks(retrievedRaw, message);
+    let retrievedRaw = [];
+    if (followUpContextOverride) {
+      const cached = state.retrievalCache.get(conversationId);
+      if (Array.isArray(cached) && cached.length) {
+        retrievedRaw = cached;
+      }
+    }
+    if (!retrievedRaw.length) {
+      retrievedRaw = state.retriever.retrieve(effectiveMessage, topK, queryEmbedding);
+    }
+    const retrievedFiltered = filterRetrievedChunks(retrievedRaw, effectiveMessage);
     const sufficient = hasSufficientSources(retrievedFiltered);
     const confidence = retrievalConfidence(retrievedFiltered);
 
-    const retrievedChunks = retrievedFiltered.map((chunk) => ({
+    const retrievedChunks = retrievedFiltered.slice(0, 2).map((chunk) => ({
       source: chunk?.metadata?.source || chunk?.metadata?.title || "Unknown source",
       snippet: String(chunk?.text || "").slice(0, 260),
       score: chunk.score,
@@ -384,11 +643,11 @@ app.post("/api/chat", async (req, res) => {
       metadata: chunk.metadata
     }));
 
-    const citations = buildCitations(retrievedFiltered);
+    const citations = buildCitations(retrievedFiltered, { maxItems: 2 });
     const reasoning = buildReasoning({
       chunks: retrievedFiltered,
       confidence,
-      question: message
+      question: effectiveMessage
     });
 
     if (!sufficient) {
@@ -415,31 +674,41 @@ app.post("/api/chat", async (req, res) => {
       return stream ? sendStreamedResponse(res, payload) : res.json(payload);
     }
 
+    state.retrievalCache.set(conversationId, retrievedFiltered.slice(0, Math.max(2, topK)));
+
     const contextBlocks = formatContextBlocks(retrievedFiltered);
+    const attachmentBlocks = buildAttachmentContextBlocks(attachments);
+    const mergedContextBlocks = [...contextBlocks, ...attachmentBlocks];
     const memory = sanitizeHistoryForPrompt(getConversation(conversationId));
 
     let answer = await generateGroundedAnswer({
-      message,
-      contextBlocks,
+      message: effectiveMessage,
+      contextBlocks: mergedContextBlocks,
       safetyInstruction: safetyTriggered ? ADVICE_DISCLAIMER : "",
       history: memory,
       confidence,
-      reasoning
+      reasoning,
+      responseStyle
     });
 
     answer = toGeneralInfoStyle(answer);
     answer = formatAnswerForReadability(answer);
     answer = polishAnswerText(answer);
+    answer = stripInlineUrls(answer);
+    if (responseStyle === "bullet") {
+      answer = normalizeBulletAnswer(answer);
+    }
 
     if (safetyTriggered) {
-      answer = `In general, the source states:\n${answer}\n\n${ADVICE_DISCLAIMER}`;
+      const safety = buildSafetyResponse(normalizedMessage);
+      answer = `${safety.answer}\n\nGeneral legal information:\n${answer}`;
     }
 
     const answerType = detectAnswerType({
       scope: "in_scope",
       safetyTriggered,
       citations,
-      question: message
+      question: effectiveMessage
     });
 
     const payload = makeResponse({

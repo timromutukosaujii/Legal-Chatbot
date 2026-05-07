@@ -25,21 +25,23 @@ export async function generateEmbedding(inputText) {
   const apiKey = (process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) return null;
 
-  const response = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: DEFAULT_EMBED_MODEL,
-      input: inputText
-    })
-  });
-
-  if (!response.ok) {
+  let response;
+  try {
+    response = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: DEFAULT_EMBED_MODEL,
+        input: inputText
+      })
+    });
+  } catch {
     return null;
   }
+  if (!response.ok) return null;
 
   const payload = await response.json();
   return payload?.data?.[0]?.embedding || null;
@@ -61,7 +63,55 @@ export async function generateEmbeddingsForChunks(chunks) {
   return map;
 }
 
-function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history, confidence, reasoning }) {
+function buildStyleInstruction(responseStyle) {
+  if (responseStyle === "overview") {
+    return [
+      "Response style: overview",
+      "Treat the user request as broad-topic overview.",
+      "Start with 1 short plain-English sentence.",
+      "Then provide 4-6 concise bullets with concrete legal examples.",
+      "Preserve article numbers accurately (e.g., Article 2, Article 6, Article 8, Article 10, Article 14).",
+      "No links in answer text.",
+      "No filler ending."
+    ].join("\n");
+  }
+
+  if (responseStyle === "simple_explain") {
+    return [
+      "Response style: simple_explain",
+      "Do not repeat the previous answer wording.",
+      "Explain the same legal point in plainer English.",
+      "Use 1 short opening sentence, then 3-5 short bullets.",
+      "Include one practical meaning/example in simple terms.",
+      "Keep Article numbers accurate (for example: Article 8, Article 10).",
+      "No filler ending."
+    ].join("\n");
+  }
+
+  if (responseStyle === "bullet") {
+    return [
+      "Response style: bullet",
+      "Use bullet points only.",
+      "Maximum 5 bullets.",
+      "Each bullet must be short and on its own line.",
+      "No long intro paragraph and no outro filler."
+    ].join("\n");
+  }
+  if (responseStyle === "detailed") {
+    return [
+      "Response style: detailed",
+      "Use short sections with clear headings.",
+      "Keep structure readable and grounded in sources."
+    ].join("\n");
+  }
+  return [
+    "Response style: concise",
+    "Use 2-4 sentences maximum.",
+    "No unnecessary explanation or filler."
+  ].join("\n");
+}
+
+function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, history, confidence, reasoning, responseStyle }) {
   const historyText = (history || [])
     .slice(-6)
     .map((h) => `${h.role === "assistant" ? "Assistant" : "User"}: ${h.text}`)
@@ -69,16 +119,23 @@ function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, histor
 
   return [
     "You are a UK legal and human-rights information assistant.",
-    "Use only the retrieved legal sources.",
-    "Do not use general model knowledge unless it is directly supported by the retrieved context.",
+    "Sound natural, warm, and clear, like a helpful human explainer.",
+    "Use only the retrieved legal sources for factual claims.",
+    "Do not use general model knowledge unless directly supported by retrieved context.",
     "Do not provide personalised legal advice.",
     "Do not predict case outcomes.",
-    "Explain in plain English.",
+    "Explain in plain English for non-experts.",
+    "Use valid Markdown with clean bullets and line breaks.",
+    "Never truncate bullet items or article numbers.",
+    "Preserve legal article numbers exactly (e.g., Article 2, Article 6, Article 8, Article 10, Article 14).",
     "Cite the sources used.",
-    "If the retrieved context is insufficient, say you cannot answer confidently.",
-    "Use phrasing like 'In general' or 'The source states'.",
-    "Keep answers concise, simple, and natural for non-experts.",
-    "Return a single clear answer paragraph unless bullets are truly needed.",
+    "Do not include a 'Sources:' section in the answer text.",
+    "Do not include URLs or markdown links in the answer text.",
+    "If context is insufficient, say so clearly and briefly.",
+    "Avoid repetitive boilerplate phrases and avoid robotic wording.",
+    "Prefer short paragraphs; only use bullets when they improve clarity.",
+    "Do not end with conversational filler like 'Would you like to know more?'.",
+    buildStyleInstruction(responseStyle),
     safetyInstruction ? `Safety instruction: ${safetyInstruction}` : "",
     confidence ? `Retrieval confidence: ${confidence}` : "",
     reasoning ? `Retrieval reasoning: ${JSON.stringify(reasoning)}` : "",
@@ -92,7 +149,7 @@ function buildGroundedPrompt({ message, contextBlocks, safetyInstruction, histor
     contextBlocks.length ? contextBlocks.join("\n\n") : "(none)",
     "",
     "Output requirements:",
-    "- concise factual answer",
+    "- concise factual answer in natural conversational tone",
     "- no personal legal strategy",
     "- no invented facts"
   ]
@@ -106,7 +163,8 @@ export async function generateGroundedAnswer({
   safetyInstruction,
   history = [],
   confidence = null,
-  reasoning = null
+  reasoning = null,
+  responseStyle = "concise"
 }) {
   const apiKey = (process.env.OPENAI_API_KEY || "").trim();
   if (!apiKey) {
@@ -119,20 +177,26 @@ export async function generateGroundedAnswer({
     safetyInstruction,
     history,
     confidence,
-    reasoning
+    reasoning,
+    responseStyle
   });
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: DEFAULT_CHAT_MODEL,
-      input: [{ role: "user", content: prompt }]
-    })
-  });
+  let response;
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: DEFAULT_CHAT_MODEL,
+        input: [{ role: "user", content: prompt }]
+      })
+    });
+  } catch {
+    return "I could not find enough information in the legal knowledge base to answer this confidently.";
+  }
 
   if (!response.ok) {
     return "I could not find enough information in the legal knowledge base to answer this confidently.";

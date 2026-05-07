@@ -1,4 +1,4 @@
-﻿const IN_SCOPE_PATTERNS = [
+const IN_SCOPE_PATTERNS = [
   /\buk human rights\b/i,
   /\bhuman rights act\b/i,
   /\b(?:hra\s*1998|hra)\b/i,
@@ -14,7 +14,21 @@
   /\bfair trial\b/i,
   /\bdiscrimination\b/i,
   /\bpublic authorit(y|ies)\b/i,
-  /\barticle\s*\d+\b/i
+  /\barticle\s*\d+\b/i,
+  /\bartic(?:le|al)\s*\d+\b/i,
+  /\bdeclaration of incompatibilit(y|ies)\b/i,
+  /\bjudicial review\b/i,
+  /\brule of law\b/i,
+  /\bparliament\b/i,
+  /\bpublic law\b/i
+];
+
+const LEGAL_CONTEXT_PATTERNS = [
+  /\buk law\b/i,
+  /\blegal\b/i,
+  /\bcourt(s)?\b/i,
+  /\brights?\b/i,
+  /\bconstitution(al)?\b/i
 ];
 
 const OUT_SCOPE_PATTERNS = [
@@ -43,7 +57,10 @@ export function checkScope(message) {
     };
   }
 
-  const inScope = IN_SCOPE_PATTERNS.some((p) => p.test(text));
+  const inScope =
+    IN_SCOPE_PATTERNS.some((p) => p.test(text)) ||
+    LEGAL_CONTEXT_PATTERNS.some((p) => p.test(text));
+
   return {
     scope: inScope ? "in_scope" : "out_of_scope",
     inScope,

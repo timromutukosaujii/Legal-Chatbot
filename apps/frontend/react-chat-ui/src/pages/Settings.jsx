@@ -7,8 +7,7 @@ export default function Settings({
   onModelChange,
   onSetPlan,
   onClearHistory,
-  onNavigateChat,
-  onNavigateSubscription
+  onNavigateChat
 }) {
   return (
     <main className="auth-page">
@@ -45,7 +44,6 @@ export default function Settings({
 
         <div className="settings-actions">
           <button type="button" className="ghost" onClick={onClearHistory}>Clear history</button>
-          <button type="button" className="ghost" onClick={onNavigateSubscription}>Subscription</button>
           <button type="button" className="primary" onClick={onNavigateChat}>Back to chat</button>
         </div>
       </section>

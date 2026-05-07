@@ -1,16 +1,18 @@
-﻿export default function Navbar({ onOpenProfile }) {
+export default function Navbar({ onToggleSidebar, onToggleTheme, theme }) {
   return (
     <header className="topbar">
-      <div>
-        <h2>UK Constitutional + Human Rights Assistant</h2>
-        <p>Citation-grounded legal information prototype</p>
+      <div className="topbar-copy-wrap">
+        <button type="button" className="mobile-menu-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          Menu
+        </button>
+        <div className="topbar-copy">
+          <h2>UK Rights Legal Assistant</h2>
+        </div>
       </div>
       <div className="topbar-actions">
-        <span className="plan-chip">Prototype</span>
-        <span className="usage-chip">RAG Enabled</span>
-        <span className="usage-chip">Source-Grounded</span>
-        <span className="usage-chip">Legal Info Only</span>
-        <button type="button" className="ghost" onClick={onOpenProfile}>Profile</button>
+        <button type="button" className="ghost" onClick={onToggleTheme}>
+          {theme === "dark" ? "Light" : "Dark"} mode
+        </button>
       </div>
     </header>
   );

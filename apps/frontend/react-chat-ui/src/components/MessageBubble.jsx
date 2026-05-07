@@ -26,6 +26,43 @@ function renderWithGlossary(text) {
   });
 }
 
+function renderStructuredText(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) return null;
+
+  const items = [];
+  let bulletBuffer = [];
+
+  const flushBullets = () => {
+    if (!bulletBuffer.length) return;
+    items.push(
+      <ul key={`bullets-${items.length}`} className="assistant-bullets">
+        {bulletBuffer.map((bullet, idx) => (
+          <li key={`${bullet}-${idx}`}>{renderWithGlossary(bullet)}</li>
+        ))}
+      </ul>
+    );
+    bulletBuffer = [];
+  };
+
+  for (const line of lines) {
+    const bulletMatch = line.match(/^(?:[-*•]\s+)(.+)$/);
+    if (bulletMatch) {
+      bulletBuffer.push(bulletMatch[1].trim());
+      continue;
+    }
+    flushBullets();
+    items.push(<p key={`line-${items.length}`}>{renderWithGlossary(line)}</p>);
+  }
+  flushBullets();
+
+  return items;
+}
+
 export default function MessageBubble({
   role,
   text,
@@ -41,28 +78,42 @@ export default function MessageBubble({
   const isAssistant = role !== "user";
   const hasEvidence = citations.length > 0 || Boolean(queryType);
   const isIntroMessage = isAssistant && !hasEvidence;
+  const isCasual = String(queryType || "").toLowerCase() === "casual";
+  const isOutOfScope = String(scope || "").toLowerCase() === "out_of_scope" || String(queryType || "").toLowerCase() === "out_of_scope";
+  const confidenceValue = String(confidence || "low").toLowerCase();
+  const showConfidence = isAssistant && !isOutOfScope && !safetyTriggered && ["medium", "high"].includes(confidenceValue);
 
   return (
-    <article className={`bubble ${role === "user" ? "user" : "assistant"}`}>
+    <article className={`bubble ${role === "user" ? "user" : "assistant"} ${safetyTriggered ? "safety-bubble" : ""}`}>
       <div className="bubble-header">
         <strong>{role === "user" ? "You" : "Assistant"}</strong>
         {time ? <span className="bubble-time">{time}</span> : null}
       </div>
 
       {isAssistant ? (
+        isCasual ? (
+          <p>{text}</p>
+        ) : (
         isIntroMessage ? (
           <p>{text}</p>
         ) : (
           <div className="assistant-structured">
-            <p className="section-label">Answer</p>
-            <p>{renderWithGlossary(text)}</p>
+            <div className="assistant-text">{renderStructuredText(text)}</div>
 
             <div className="meta-row">
-              <span className={`confidence confidence-${String(confidence || "low").toLowerCase()}`}>
-                Confidence: {confidence}
-              </span>
-              {safetyTriggered ? <span className="query-type">Safety: triggered</span> : null}
+              {showConfidence ? (
+                <span className={`confidence confidence-${confidenceValue}`}>
+                  Confidence: {confidence}
+                </span>
+              ) : null}
+              {isOutOfScope ? <span className="query-type">Out of scope</span> : null}
             </div>
+
+            {safetyTriggered ? (
+              <div className="safety-note">
+                This response provides general legal information only and is not personalised legal advice.
+              </div>
+            ) : null}
 
             {citations.length ? (
               <>
@@ -70,17 +121,8 @@ export default function MessageBubble({
                 <ul className="source-list">
                   {citations.map((c, idx) => (
                     <li key={`${c.source || "source"}-${idx}`} className="source-card">
-                      <strong>{c.title || c.source || "Source"}</strong>
-                      {c.source ? <span>Source: {c.source}</span> : null}
-                      {c.topic ? <span>Topic: {c.topic}</span> : null}
-                      {typeof c.score === "number" ? <span>Relevance score: {c.score.toFixed(3)}</span> : null}
-                      {c.whyUsed ? <span>Why used: {c.whyUsed}</span> : null}
-                      {c.url ? (
-                        <a href={c.url} target="_blank" rel="noreferrer">
-                          View Source
-                        </a>
-                      ) : null}
-                      {c.snippet ? <span>{c.snippet}</span> : null}
+                      <strong>{c.title || "Source"}</strong>
+                      {c.source ? <span className="source-domain">{c.source}</span> : null}
                     </li>
                   ))}
                 </ul>
@@ -89,7 +131,7 @@ export default function MessageBubble({
 
             {Array.isArray(suggestedFollowUps) && suggestedFollowUps.length ? (
               <>
-                <p className="section-label">You might also ask</p>
+                <p className="section-label">You might also ask:</p>
                 <div className="suggestions">
                   {suggestedFollowUps.slice(0, 3).map((item) => (
                     <button
@@ -105,6 +147,7 @@ export default function MessageBubble({
               </>
             ) : null}
           </div>
+        )
         )
       ) : (
         <p>{text}</p>

@@ -105,7 +105,7 @@ data/legal_documents
 ```
 
 Restart Node API or call `/api/admin/reload-docs` after updates.
-ave 
+
 ## Docs
 
 - Ethics & safety: `docs/ethics-safety.md`

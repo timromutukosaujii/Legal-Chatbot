@@ -1,7 +1,7 @@
-﻿export function buildCitations(retrievedChunks) {
+export function buildCitations(retrievedChunks, { maxItems = 2 } = {}) {
   const byKey = new Map();
 
-  const cleanSnippet = (value, maxLen = 240) => {
+  const cleanSnippet = (value, maxLen = 140) => {
     const text = String(value || "").replace(/\s+/g, " ").trim();
     if (text.length <= maxLen) return text;
     const cut = text.slice(0, maxLen);
@@ -16,23 +16,21 @@
     const topic = chunk?.metadata?.topic || "General";
     const key = `${title}::${source}::${url}::${topic}`;
     const score = Number(chunk?.score || 0);
-    const relevance =
-      score >= 0.55 ? "strong match to your question topic" : score >= 0.35 ? "moderate match to your question topic" : "partial match";
-
     if (!byKey.has(key)) {
       byKey.set(key, {
         title,
         source,
         url,
         topic,
-        snippet: cleanSnippet(chunk?.text || "", 240),
         score,
-        whyUsed: relevance
+        snippet: cleanSnippet(chunk?.text || "", 140)
       });
     }
   }
 
-  return [...byKey.values()];
+  return [...byKey.values()]
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+    .slice(0, Math.max(1, Number(maxItems) || 2));
 }
 
 export function formatContextBlocks(retrievedChunks) {
@@ -48,3 +46,5 @@ export function formatContextBlocks(retrievedChunks) {
     ].join("\n");
   });
 }
+
+

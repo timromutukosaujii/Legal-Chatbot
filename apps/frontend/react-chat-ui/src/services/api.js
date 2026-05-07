@@ -7,6 +7,51 @@ function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function canReadAsText(file) {
+  const type = String(file?.type || "").toLowerCase();
+  const name = String(file?.name || "").toLowerCase();
+  return (
+    type.startsWith("text/") ||
+    name.endsWith(".txt") ||
+    name.endsWith(".md") ||
+    name.endsWith(".csv") ||
+    name.endsWith(".json")
+  );
+}
+
+function readFileAsText(file, maxChars = 6000) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result || "");
+      resolve(value.slice(0, maxChars));
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsText(file);
+  });
+}
+
+async function normalizeAttachments(attachments = []) {
+  if (!Array.isArray(attachments) || !attachments.length) return [];
+  const out = [];
+  for (const item of attachments) {
+    const file = item?.file;
+    if (!file) continue;
+    const base = {
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      size: Number(file.size || 0)
+    };
+    if (canReadAsText(file)) {
+      const text = await readFileAsText(file);
+      out.push({ ...base, text });
+    } else {
+      out.push(base);
+    }
+  }
+  return out.slice(0, 6);
+}
+
 async function parseResponse(res) {
   if (!res.ok) {
     let detail = "Request failed";
@@ -42,11 +87,13 @@ export async function sendChatMessage(payloadOrQuestion, maybeHistory = [], mayb
     stream = false
   } = payload;
 
+  const normalizedAttachments = await normalizeAttachments(payload.attachments || []);
   const body = {
     message: String(message || question || ""),
     history,
     stream,
-    conversationId: conversationId || sessionId || null
+    conversationId: conversationId || sessionId || null,
+    attachments: normalizedAttachments
   };
 
   const res = await fetch(`${API_BASE_URL}/api/chat`, {

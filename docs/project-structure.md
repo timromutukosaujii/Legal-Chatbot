@@ -1,27 +1,22 @@
 # Project Structure
 
+## Systematic Order
+
+1. `apps/`: runnable application code only
+2. `data/`: legal documents and evaluation inputs
+3. `docs/`: project documentation and methodology
+4. `db/`: schema and data-layer assets
+5. `archive/`: legacy code kept only for reference
+6. `release/`: packaging/export snapshots
+
 ## Active Application (Use This)
 
 - `apps/frontend/react-chat-ui`: React chat UI.
 - `apps/backend/node-api`: Express API with RAG retrieval and OpenAI generation.
 - `data/legal_documents`: Retrieval source text files.
 
-## Support Files
+## Keep Root Clean
 
-- `db/schema.sql`: Draft schema for future database migration.
-- `docs/ethics-safety.md`: Safety and policy notes.
-- `docs/timeline.md`: Delivery timeline notes.
-
-## Legacy / Archive
-
-- `archive/legacy/ai-service`: Legacy Python service retained for reference.
-- `archive/legacy/*`: Old scaffolds/prototypes.
-- `release/*`: Snapshot/export bundles.
-
-## Recommended Working Rule
-
-For daily development, work mainly in:
-
-1. `apps/frontend/react-chat-ui`
-2. `apps/backend/node-api`
-3. `data/legal_documents`
+- Keep only top-level project files in root (`README.md`, `docker-compose.yml`, scripts, `.gitignore`).
+- Do not keep generated logs, temporary outputs, or duplicate snapshots in root.
+- Put historical code in `archive/` and distribution bundles in `release/`.

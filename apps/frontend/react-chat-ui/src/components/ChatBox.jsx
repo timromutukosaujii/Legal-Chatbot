@@ -1,8 +1,7 @@
-﻿import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import NoticeCard from "./NoticeCard";
-import TopicCards from "./TopicCards";
 import { sendChatMessage } from "../services/api";
 
 const QUICK_PROMPTS = [
@@ -23,10 +22,23 @@ function classifyTitle(text = "") {
   return "UK legal information";
 }
 
-export default function ChatBox({ token, conversation, onConversationChange, onUsageUpdate, notice, setNotice }) {
+function makeAssistantIntro() {
+  return {
+    role: "assistant",
+    text: "Hello. I can help explain UK constitutional and human-rights law using source-grounded information. I do not provide personalised legal advice.",
+    citations: [],
+    confidence: "Low",
+    retrievedChunks: [],
+    time: new Date().toLocaleTimeString()
+  };
+}
+
+export default function ChatBox({ token, conversation, onConversationChange, onUsageUpdate, notice, setNotice, featurePromptToken = 0 }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   const messagesRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const messages = conversation?.messages || [];
   const hasStartedChat = useMemo(
@@ -40,6 +52,12 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
     }
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (!featurePromptToken || loading) return;
+    submit("Tell me about your features");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featurePromptToken]);
+
   const updateConversation = (nextMessages) => {
     const firstUser = nextMessages.find((m) => m.role === "user");
     const title = firstUser ? classifyTitle(firstUser.text) : "New chat";
@@ -47,16 +65,30 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
   };
 
   const submit = async (question) => {
-    if (!question || loading) return;
+    const cleanQuestion = String(question || "").trim();
+    if ((!cleanQuestion && attachments.length === 0) || loading) return;
     setNotice("");
 
-    const next = [...messages, { role: "user", text: question, time: new Date().toLocaleTimeString() }];
+    const attachmentNames = attachments.map((f) => f.name).join(", ");
+    const outgoingQuestion = cleanQuestion || `Please help me with these uploaded files: ${attachmentNames}`;
+    const userText = attachments.length
+      ? `${outgoingQuestion}\n\nAttachments: ${attachmentNames}`
+      : outgoingQuestion;
+    const attachmentsToSend = attachments.map((f) => ({ name: f.name, type: f.type, size: f.size, file: f }));
+    const next = [...messages, { role: "user", text: userText, time: new Date().toLocaleTimeString() }];
     updateConversation(next);
     setInput("");
+    setAttachments([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(true);
 
     try {
-      const data = await sendChatMessage({ token, question, conversationId: conversation.id });
+      const data = await sendChatMessage({
+        token,
+        question: outgoingQuestion,
+        conversationId: conversation.id,
+        attachments: attachmentsToSend
+      });
       const updated = [
         ...next,
         {
@@ -85,24 +117,52 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
     }
   };
 
+  const clearCurrentChat = () => {
+    updateConversation([makeAssistantIntro()]);
+    setAttachments([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const onPickFiles = (event) => {
+    const selected = Array.from(event.target.files || []);
+    if (!selected.length) return;
+    setAttachments((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      const merged = [...prev];
+      for (const file of selected) {
+        const key = `${file.name}-${file.size}`;
+        if (!seen.has(key)) {
+          merged.push(file);
+          seen.add(key);
+        }
+      }
+      return merged.slice(0, 6);
+    });
+  };
+
+  const removeAttachment = (targetName, targetSize) => {
+    setAttachments((prev) => prev.filter((f) => !(f.name === targetName && f.size === targetSize)));
+  };
+
   return (
     <section className="chat-card">
+      <div className="status-bar">
+        <span />
+        <div className="status-actions">
+          <button type="button" className="ghost" onClick={clearCurrentChat}>Clear chat</button>
+        </div>
+      </div>
+
       <NoticeCard />
       {notice ? <p className="error-banner">{notice}</p> : null}
-
-      <div className="status-bar">
-        <span>Source-grounded UK constitutional and human-rights assistant.</span>
-        <button type="button" className="ghost" onClick={() => window.print()}>Export Chat (PDF)</button>
-      </div>
 
       <AnimatePresence mode="wait">
         {!hasStartedChat ? (
           <motion.div key="pre-chat-panel" className="prechat-panel" initial={{ opacity: 1, y: 0 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.24, ease: "easeOut" }}>
             <div className="welcome-panel">
-              <h3>Explore UK Constitutional and Human Rights Law</h3>
-              <p>Ask questions grounded in public legal sources.</p>
+              <h3>Ask clear legal questions, get grounded answers</h3>
+              <p>Responses are based on your loaded UK legal documents and include citations.</p>
             </div>
-            <TopicCards onSelectTopic={submit} />
             <div className="suggestions">
               {QUICK_PROMPTS.map((item) => (
                 <button key={item} type="button" className="suggestion" onClick={() => setInput(item)}>{item}</button>
@@ -121,10 +181,54 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
         ) : null}
       </div>
 
+      {attachments.length ? (
+        <div className="attachments-row">
+          {attachments.map((file) => (
+            <span key={`${file.name}-${file.size}`} className="attachment-chip">
+              {file.name}
+              <button type="button" onClick={() => removeAttachment(file.name, file.size)} aria-label={`Remove ${file.name}`}>
+                x
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       <form className="composer" onSubmit={(e) => { e.preventDefault(); submit(input.trim()); }}>
-        <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask about UK human rights or constitutional law" />
-        <button type="submit" disabled={loading}>{loading ? "Thinking..." : "Send"}</button>
+        <button
+          type="button"
+          className="attachment-btn"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="Add files"
+          title="Add files or images"
+        >
+          +
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.pdf,.txt,.doc,.docx"
+          multiple
+          hidden
+          onChange={onPickFiles}
+        />
+        <textarea
+          rows={1}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              submit(input.trim());
+            }
+          }}
+          placeholder="Type your legal question..."
+        />
+        <button type="submit" className="send-btn" disabled={loading || !input.trim()} aria-label="Send">
+          {loading ? "..." : "Send"}
+        </button>
       </form>
     </section>
   );
 }
+
