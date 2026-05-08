@@ -85,7 +85,7 @@ export default function Login({ onAuthed, onNavigateRegister }) {
     <main className="auth-page">
       <section className="auth-card">
         <h1>Login</h1>
-        <p>AI Legal Assistant Platform</p>
+        <p>Adhikar UK Legal and Human Rights Assistant</p>
 
         <form onSubmit={submit}>
           <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>

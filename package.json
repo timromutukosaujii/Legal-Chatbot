@@ -1,7 +1,10 @@
 {
-  "dependencies": {
-    "build": "^0.1.4",
-    "npm": "^11.14.0",
-    "run": "^1.5.0"
+  "name": "adhikar-uk-rights-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:start": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-dev.ps1",
+    "dev:health": "powershell -ExecutionPolicy Bypass -File scripts/check-health.ps1"
   }
 }

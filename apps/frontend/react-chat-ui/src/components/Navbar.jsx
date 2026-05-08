@@ -5,8 +5,10 @@ export default function Navbar({ onToggleSidebar, onToggleTheme, theme }) {
         <button type="button" className="mobile-menu-btn" onClick={onToggleSidebar} aria-label="Toggle sidebar">
           Menu
         </button>
+        <img src="/adhikar-logo.svg" alt="Adhikar logo" className="brand-logo topbar-logo" />
         <div className="topbar-copy">
-          <h2>UK Rights Legal Assistant</h2>
+          <h2>Adhikar</h2>
+          <small className="brand-meaning">right / entitlement</small>
         </div>
       </div>
       <div className="topbar-actions">

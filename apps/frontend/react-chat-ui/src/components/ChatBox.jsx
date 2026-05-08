@@ -36,9 +36,9 @@ function makeAssistantIntro() {
 export default function ChatBox({ token, conversation, onConversationChange, onUsageUpdate, notice, setNotice, featurePromptToken = 0 }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [attachments, setAttachments] = useState([]);
+  const [loadingPhase, setLoadingPhase] = useState("Checking legal sources...");
+  const [confirmClear, setConfirmClear] = useState(false);
   const messagesRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const messages = conversation?.messages || [];
   const hasStartedChat = useMemo(
@@ -54,9 +54,20 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
 
   useEffect(() => {
     if (!featurePromptToken || loading) return;
-    submit("Tell me about your features");
+    submit("What can you do?");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [featurePromptToken]);
+
+  useEffect(() => {
+    if (!loading) return undefined;
+    setLoadingPhase("Checking legal sources...");
+    const timer = setInterval(() => {
+      setLoadingPhase((prev) =>
+        prev === "Checking legal sources..." ? "Generating source-grounded answer..." : "Checking legal sources..."
+      );
+    }, 1300);
+    return () => clearInterval(timer);
+  }, [loading]);
 
   const updateConversation = (nextMessages) => {
     const firstUser = nextMessages.find((m) => m.role === "user");
@@ -66,28 +77,18 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
 
   const submit = async (question) => {
     const cleanQuestion = String(question || "").trim();
-    if ((!cleanQuestion && attachments.length === 0) || loading) return;
+    if (!cleanQuestion || loading) return;
     setNotice("");
-
-    const attachmentNames = attachments.map((f) => f.name).join(", ");
-    const outgoingQuestion = cleanQuestion || `Please help me with these uploaded files: ${attachmentNames}`;
-    const userText = attachments.length
-      ? `${outgoingQuestion}\n\nAttachments: ${attachmentNames}`
-      : outgoingQuestion;
-    const attachmentsToSend = attachments.map((f) => ({ name: f.name, type: f.type, size: f.size, file: f }));
-    const next = [...messages, { role: "user", text: userText, time: new Date().toLocaleTimeString() }];
+    const next = [...messages, { role: "user", text: cleanQuestion, time: new Date().toLocaleTimeString() }];
     updateConversation(next);
     setInput("");
-    setAttachments([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(true);
 
     try {
       const data = await sendChatMessage({
         token,
-        question: outgoingQuestion,
-        conversationId: conversation.id,
-        attachments: attachmentsToSend
+        question: cleanQuestion,
+        conversationId: conversation.id
       });
       const updated = [
         ...next,
@@ -119,29 +120,7 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
 
   const clearCurrentChat = () => {
     updateConversation([makeAssistantIntro()]);
-    setAttachments([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const onPickFiles = (event) => {
-    const selected = Array.from(event.target.files || []);
-    if (!selected.length) return;
-    setAttachments((prev) => {
-      const seen = new Set(prev.map((f) => `${f.name}-${f.size}`));
-      const merged = [...prev];
-      for (const file of selected) {
-        const key = `${file.name}-${file.size}`;
-        if (!seen.has(key)) {
-          merged.push(file);
-          seen.add(key);
-        }
-      }
-      return merged.slice(0, 6);
-    });
-  };
-
-  const removeAttachment = (targetName, targetSize) => {
-    setAttachments((prev) => prev.filter((f) => !(f.name === targetName && f.size === targetSize)));
+    setConfirmClear(false);
   };
 
   return (
@@ -149,7 +128,7 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
       <div className="status-bar">
         <span />
         <div className="status-actions">
-          <button type="button" className="ghost" onClick={clearCurrentChat}>Clear chat</button>
+          <button type="button" className="ghost" onClick={() => setConfirmClear(true)}>Clear Chat</button>
         </div>
       </div>
 
@@ -177,41 +156,11 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
           <MessageBubble key={idx} role={m.role} text={m.text} time={m.time} citations={m.citations || []} confidence={m.confidence || "low"} retrievedChunks={m.retrievedChunks || []} queryType={m.queryType} scope={m.scope} safetyTriggered={m.safetyTriggered} suggestedFollowUps={m.suggestedFollowUps || []} reasoning={m.reasoning || null} onSuggestionClick={(s) => setInput(s)} />
         ))}
         {loading ? (
-          <div className="bubble assistant typing"><div className="bubble-header"><strong>Assistant</strong><span className="bubble-time">now</span></div><p>Retrieving sources and generating answer...</p><div className="typing-dots" aria-hidden="true"><span /><span /><span /></div></div>
+          <div className="bubble assistant typing"><div className="bubble-header"><strong>Assistant</strong><span className="bubble-time">now</span></div><p>{loadingPhase}</p><div className="typing-dots" aria-hidden="true"><span /><span /><span /></div></div>
         ) : null}
       </div>
 
-      {attachments.length ? (
-        <div className="attachments-row">
-          {attachments.map((file) => (
-            <span key={`${file.name}-${file.size}`} className="attachment-chip">
-              {file.name}
-              <button type="button" onClick={() => removeAttachment(file.name, file.size)} aria-label={`Remove ${file.name}`}>
-                x
-              </button>
-            </span>
-          ))}
-        </div>
-      ) : null}
-
       <form className="composer" onSubmit={(e) => { e.preventDefault(); submit(input.trim()); }}>
-        <button
-          type="button"
-          className="attachment-btn"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label="Add files"
-          title="Add files or images"
-        >
-          +
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,.pdf,.txt,.doc,.docx"
-          multiple
-          hidden
-          onChange={onPickFiles}
-        />
         <textarea
           rows={1}
           value={input}
@@ -222,12 +171,26 @@ export default function ChatBox({ token, conversation, onConversationChange, onU
               submit(input.trim());
             }
           }}
-          placeholder="Type your legal question..."
+          placeholder="Ask about UK human rights or constitutional law..."
         />
         <button type="submit" className="send-btn" disabled={loading || !input.trim()} aria-label="Send">
           {loading ? "..." : "Send"}
         </button>
       </form>
+      <p className="composer-helper">General legal information only</p>
+
+      {confirmClear ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Clear chat confirmation">
+          <div className="modal-card">
+            <h3>Clear current chat?</h3>
+            <p>This will remove messages from the current chat window.</p>
+            <div className="modal-actions">
+              <button type="button" className="ghost" onClick={() => setConfirmClear(false)}>Cancel</button>
+              <button type="button" className="primary danger" onClick={clearCurrentChat}>Clear</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

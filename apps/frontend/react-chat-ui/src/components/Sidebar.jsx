@@ -13,8 +13,10 @@ export default function Sidebar({
     <>
       <aside className={`sidebar ${open ? "open" : ""}`}>
         <div className="sidebar-brand">
-          <h1>UK Rights Assistant</h1>
-          <p>Constitutional + Human Rights RAG</p>
+          <img src="/adhikar-logo.svg" alt="Adhikar logo" className="brand-logo sidebar-logo" />
+          <h1>Adhikar</h1>
+          <small className="brand-meaning">right / entitlement</small>
+          <p>UK Legal and Human Rights Assistant</p>
         </div>
 
         <button className="new-chat" type="button" onClick={onNewChat}>+ New Chat</button>
@@ -37,7 +39,7 @@ export default function Sidebar({
         <div className="sidebar-divider" />
 
         <div className="sidebar-actions">
-          <button type="button" className="ghost sidebar-btn" onClick={onFeatures}>Features</button>
+          <button type="button" className="ghost sidebar-btn" onClick={onFeatures}>About Assistant</button>
           <button type="button" className="ghost sidebar-btn" onClick={onLogout}>Logout</button>
         </div>
       </aside>

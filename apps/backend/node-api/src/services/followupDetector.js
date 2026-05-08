@@ -1,4 +1,5 @@
 const FOLLOW_UP_PATTERNS = [
+  /^(explain|elaborate|clarify|summar(?:ize|ise)|summary|short|brief|bullets?)$/i,
   /\b(summar(?:ize|ise|ized|ised|izing|ising)|summary)\b/i,
   /\b(bullet|bullet points|in points|list format)\b/i,
   /\b(explain it|explain more|tell me more|clarify)\b/i,
@@ -13,4 +14,3 @@ export function detectFollowUpIntent(message) {
   const isFollowUp = FOLLOW_UP_PATTERNS.some((pattern) => pattern.test(text));
   return { isFollowUp };
 }
-

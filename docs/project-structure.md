@@ -20,3 +20,9 @@
 - Keep only top-level project files in root (`README.md`, `docker-compose.yml`, scripts, `.gitignore`).
 - Do not keep generated logs, temporary outputs, or duplicate snapshots in root.
 - Put historical code in `archive/` and distribution bundles in `release/`.
+
+## Development Operations
+
+- `scripts/start-dev.ps1`: starts backend and frontend in background with log files.
+- `scripts/stop-dev.ps1`: stops listeners on ports `3001` and `5174`.
+- `scripts/check-health.ps1`: checks backend health and frontend availability.

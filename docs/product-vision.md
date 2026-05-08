@@ -1,6 +1,6 @@
 # Product Vision Justification
 
-The project evolves from a single chatbot into an **AI Legal Assistant Platform** with trust and control features.
+The project evolves from a single chatbot into the **Adhikar UK Legal and Human Rights Assistant** platform with trust and control features.
 
 ## Academic Rationale
 

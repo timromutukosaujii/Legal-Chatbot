@@ -1,6 +1,6 @@
-# Lawyer GPT: UK Constitutional and Human-Rights Legal Assistant
+# Adhikar: UK Constitutional and Human-Rights Legal Assistant
 
-Lawyer GPT is a retrieval-augmented legal information assistant focused on UK constitutional and human-rights law.  
+Adhikar is a retrieval-augmented legal information assistant focused on UK constitutional and human-rights law.  
 It provides source-grounded explanations in plain English and does **not** provide personalised legal advice.
 
 ## Core Capabilities
@@ -67,6 +67,21 @@ Node API (Express)
 For policy details, see [docs/ethics-safety.md](/c:/Sital/Chatbot/docs/ethics-safety.md).
 
 ## Run Locally (Windows PowerShell)
+
+### Quick start (systematic dev workflow)
+
+From project root:
+
+```powershell
+npm run dev:start
+npm run dev:health
+```
+
+Stop services:
+
+```powershell
+npm run dev:stop
+```
 
 ## 1) Start backend
 

@@ -26,6 +26,7 @@ import { detectResponseStyle } from "./services/responseStyle.js";
 import { detectFollowUpIntent } from "./services/followupDetector.js";
 import { buildSafetyResponse } from "./services/safetyResponses.js";
 import { buildAssistantMetaResponse } from "./services/metaIntentHandler.js";
+import { isAssistanceRequest, buildAssistanceResponse } from "./services/assistanceIntent.js";
 import {
   appendChatHistory,
   appendConversation,
@@ -233,8 +234,10 @@ function formatAnswerForReadability(answer) {
   const text = String(answer || "").trim();
   if (!text) return text;
   return text
-    .replace(/\s*-\s+\*\*/g, "\n- **")
-    .replace(/\s*-\s+/g, "\n- ")
+    .replace(/([^\n])\s+(-\s+\*\*)/g, "$1\n$2")
+    .replace(/([^\n])\s+(-\s+)/g, "$1\n$2")
+    .replace(/\n-\s*-\s+/g, "\n- ")
+    .replace(/^\s*[-*]\s*[-*]\s+/gm, "- ")
     .replace(/\s{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -247,6 +250,9 @@ function polishAnswerText(answer) {
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n");
+  // Fix common truncation artifacts like "...Article 8".
+  text = text.replace(/(^|\s)\.\.\.\s*(Article\s*\d+)/gi, "$1$2");
+  text = text.replace(/(^|\s)\.\.\.\s*(Article\s*\d+\s+of\s+the)/gi, "$1$2");
   text = text.replace(/\butilize\b/gi, "use");
   text = text.replace(/\bpersonalized\b/gi, "personalised");
   text = text.replace(/\blegal info\b/gi, "legal information");
@@ -258,6 +264,8 @@ function normalizeBulletAnswer(answer) {
   if (!text) return text;
   return text
     .replace(/\s+-\s+/g, "\n- ")
+    .replace(/^\d+\.\s+/gm, "- ")
+    .replace(/^[*•]\s+/gm, "- ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -355,9 +363,14 @@ function isAssistantMetaQuery(message) {
   if (!text) return false;
   const phrases = [
     "what can you do",
+    "what can u do",
     "what do you do",
     "how can you help me",
     "how can you help",
+    "what are your features",
+    "show me your features",
+    "features",
+    "capabilities",
     "tell me about your features",
     "tell me about features",
     "what are your capabilities",
@@ -385,12 +398,19 @@ function makeResponse({
   suggestedFollowUps,
   reasoning = null
 }) {
+  const answerTypeValue = String(answerType || "").toLowerCase();
+  const shouldHideConfidence =
+    answerTypeValue === "casual" ||
+    answerTypeValue === "out_of_scope" ||
+    answerTypeValue === "safety_refusal" ||
+    safetyTriggered;
+
   return {
     conversationId,
     answer,
     citations,
     retrievedChunks,
-    confidence,
+    confidence: shouldHideConfidence ? null : confidence,
     scope,
     answerType,
     safetyTriggered,
@@ -472,10 +492,29 @@ app.post("/api/chat", async (req, res) => {
   const conversationId = String(req.body?.conversationId || crypto.randomUUID());
   const topK = Number(req.body?.topK || RAG_TOP_K);
   const stream = Boolean(req.body?.stream);
+  const debugMode = Boolean(req.body?.debug);
   const attachments = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
 
   if (!message) {
     return res.status(400).json({ error: "`message` is required." });
+  }
+
+  // Hard guard for assistant-capability prompts so they never fall into out-of-scope.
+  if (isAssistanceRequest(normalizedMessage)) {
+    const answer = buildAssistanceResponse();
+    const payload = makeResponse({
+      conversationId,
+      answer,
+      citations: [],
+      retrievedChunks: [],
+      confidence: null,
+      scope: "in_scope",
+      answerType: "assistance_request",
+      safetyTriggered: false,
+      suggestedFollowUps: []
+    });
+    appendConversation(conversationId, message, answer);
+    return stream ? sendStreamedResponse(res, payload) : res.json(payload);
   }
 
   // Hard guard for assistant-capability prompts so they never fall into out-of-scope.
@@ -498,7 +537,11 @@ app.post("/api/chat", async (req, res) => {
 
   try {
     const { intent: classifiedIntent } = classifyIntent(normalizedMessage);
-    const intent = isAssistantMetaQuery(normalizedMessage) ? "assistant_meta" : classifiedIntent;
+    const intent = isAssistantMetaQuery(normalizedMessage)
+      ? "assistant_meta"
+      : isAssistanceRequest(normalizedMessage)
+        ? "assistance_request"
+        : classifiedIntent;
     const responseStyle = detectResponseStyle(normalizedMessage);
     const { isFollowUp } = detectFollowUpIntent(normalizedMessage);
 
@@ -546,6 +589,23 @@ app.post("/api/chat", async (req, res) => {
         confidence: null,
         scope: "in_scope",
         answerType: "assistant_meta",
+        safetyTriggered: false,
+        suggestedFollowUps: []
+      });
+      appendConversation(conversationId, message, answer);
+      return stream ? sendStreamedResponse(res, payload) : res.json(payload);
+    }
+
+    if (intent === "assistance_request") {
+      const answer = buildAssistanceResponse();
+      const payload = makeResponse({
+        conversationId,
+        answer,
+        citations: [],
+        retrievedChunks: [],
+        confidence: null,
+        scope: "in_scope",
+        answerType: "assistance_request",
         safetyTriggered: false,
         suggestedFollowUps: []
       });
@@ -638,7 +698,6 @@ app.post("/api/chat", async (req, res) => {
     const retrievedChunks = retrievedFiltered.slice(0, 2).map((chunk) => ({
       source: chunk?.metadata?.source || chunk?.metadata?.title || "Unknown source",
       snippet: String(chunk?.text || "").slice(0, 260),
-      score: chunk.score,
       text: chunk.text,
       metadata: chunk.metadata
     }));
@@ -721,7 +780,7 @@ app.post("/api/chat", async (req, res) => {
       answerType,
       safetyTriggered,
       suggestedFollowUps: buildFollowUps(retrievedFiltered),
-      reasoning
+      reasoning: debugMode ? reasoning : null
     });
 
     appendConversation(conversationId, message, answer);

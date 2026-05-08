@@ -28,8 +28,13 @@ export function buildCitations(retrievedChunks, { maxItems = 2 } = {}) {
     }
   }
 
-  return [...byKey.values()]
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+  return [...byKey.entries()]
+    .sort((a, b) => Number(b?.[1]?.score || 0) - Number(a?.[1]?.score || 0))
+    .map((entry) => {
+      const item = { ...entry[1] };
+      delete item.score;
+      return item;
+    })
     .slice(0, Math.max(1, Number(maxItems) || 2));
 }
 

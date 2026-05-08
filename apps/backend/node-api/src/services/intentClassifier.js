@@ -26,9 +26,14 @@ const UNSAFE_ADVICE_PATTERNS = [
 
 const ASSISTANT_META_PHRASES = [
   "what can you do",
+  "what can u do",
   "what do you do",
   "how can you help me",
   "how can you help",
+  "what are your features",
+  "show me your features",
+  "features",
+  "capabilities",
   "tell me about your features",
   "tell me about features",
   "what are your capabilities",
@@ -63,6 +68,19 @@ export function classifyIntent(message) {
 
   if (UNSAFE_ADVICE_PATTERNS.some((pattern) => pattern.test(text))) {
     return { intent: "unsafe_advice" };
+  }
+
+  if (
+    /^(help)$/i.test(text) ||
+    /\bi need (your )?help\b/i.test(text) ||
+    /\bi need assistance\b/i.test(text) ||
+    /\bcan you help me\b/i.test(text) ||
+    /\bcould you help me\b/i.test(text) ||
+    /\bassist me\b/i.test(text) ||
+    /\bwhat can you help with\b/i.test(text) ||
+    /\bplease help\b/i.test(text)
+  ) {
+    return { intent: "assistance_request" };
   }
 
   if (ASSISTANT_META_PHRASES.some((phrase) => text.includes(phrase))) {

@@ -86,7 +86,7 @@ export default function Register({ onAuthed, onNavigateLogin }) {
     <main className="auth-page">
       <section className="auth-card">
         <h1>Register</h1>
-        <p>Create your AI Legal Assistant account</p>
+        <p>Create your Adhikar account</p>
 
         <form onSubmit={submit}>
           <label>Name<input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></label>

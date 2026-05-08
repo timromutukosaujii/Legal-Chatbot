@@ -10,7 +10,7 @@ export function detectResponseStyle(message) {
     return "bullet";
   }
 
-  if (/\b(explain it|explain more|simplify|simple explanation|easier version|tell me more)\b/.test(text)) {
+  if (/^(explain|clarify|elaborate)$/i.test(text) || /\b(explain it|explain more|simplify|simple explanation|easier version|tell me more)\b/.test(text)) {
     return "simple_explain";
   }
 
@@ -18,7 +18,11 @@ export function detectResponseStyle(message) {
     return "detailed";
   }
 
-  if (/\b(summarise|summarize|summary|short answer|brief|simple explanation|make it simple|concise)\b/.test(text)) {
+  if (/\b(summary in points|summarise in points|summarize in points|short bullet|bullet summary)\b/.test(text)) {
+    return "bullet";
+  }
+
+  if (/\b(summarise|summarize|summary|short answer|brief|make it short|in short|concise)\b/.test(text)) {
     return "concise";
   }
 

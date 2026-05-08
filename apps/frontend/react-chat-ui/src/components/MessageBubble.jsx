@@ -1,4 +1,6 @@
-﻿const TERM_GLOSSARY = {
+import { useState } from "react";
+
+const TERM_GLOSSARY = {
   "Article 8": "Right to respect for private and family life.",
   "Article 10": "Right to freedom of expression.",
   "Article 14": "Protection from discrimination in enjoyment of Convention rights.",
@@ -11,7 +13,7 @@
 function renderWithGlossary(text) {
   if (!text) return null;
   const terms = Object.keys(TERM_GLOSSARY);
-  const escaped = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const escaped = terms.map((term) => term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&"));
   const pattern = new RegExp(`(${escaped.join("|")})`, "gi");
   const parts = text.split(pattern);
 
@@ -50,7 +52,7 @@ function renderStructuredText(text) {
   };
 
   for (const line of lines) {
-    const bulletMatch = line.match(/^(?:[-*•]\s+)(.+)$/);
+    const bulletMatch = line.match(/^(?:[-*�]\s+)(.+)$/);
     if (bulletMatch) {
       bulletBuffer.push(bulletMatch[1].trim());
       continue;
@@ -63,25 +65,84 @@ function renderStructuredText(text) {
   return items;
 }
 
+function compactSourceTitle(title) {
+  const raw = String(title || "Source").trim();
+  return raw.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s*-\s*.*$/, "").replace(/\s{2,}/g, " ").trim();
+}
+
+function sourceLabel(citation) {
+  const url = String(citation?.url || "").trim();
+  if (url) {
+    try {
+      return new URL(url).hostname.replace(/^www\./i, "");
+    } catch {
+      // fall through
+    }
+  }
+  return String(citation?.source || "").trim() || "Legal source";
+}
+
 export default function MessageBubble({
   role,
   text,
   time,
   citations = [],
-  confidence = "low",
   queryType,
   scope,
   safetyTriggered = false,
   suggestedFollowUps = [],
   onSuggestionClick
 }) {
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
   const isAssistant = role !== "user";
   const hasEvidence = citations.length > 0 || Boolean(queryType);
   const isIntroMessage = isAssistant && !hasEvidence;
   const isCasual = String(queryType || "").toLowerCase() === "casual";
   const isOutOfScope = String(scope || "").toLowerCase() === "out_of_scope" || String(queryType || "").toLowerCase() === "out_of_scope";
-  const confidenceValue = String(confidence || "low").toLowerCase();
-  const showConfidence = isAssistant && !isOutOfScope && !safetyTriggered && ["medium", "high"].includes(confidenceValue);
+  const isSafety = safetyTriggered || String(queryType || "").toLowerCase() === "safety_refusal";
+  const isAssistance = String(queryType || "").toLowerCase() === "assistance_request";
+
+  const defaultAssistanceChips = [
+    "Human Rights Act",
+    "Article 8 privacy",
+    "Equality Act",
+    "Constitutional law",
+    "Public authority duties"
+  ];
+  const suggestionChips = Array.isArray(suggestedFollowUps) && suggestedFollowUps.length
+    ? suggestedFollowUps
+    : isAssistance
+      ? defaultAssistanceChips
+      : [];
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(text || ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const handleFeedback = (value) => {
+    setFeedback(value);
+    try {
+      const key = "adhikar_feedback";
+      const existing = JSON.parse(localStorage.getItem(key) || "[]");
+      existing.push({
+        value,
+        queryType: String(queryType || "unknown"),
+        textPreview: String(text || "").slice(0, 160),
+        ts: new Date().toISOString()
+      });
+      localStorage.setItem(key, JSON.stringify(existing.slice(-200)));
+    } catch {
+      // non-blocking
+    }
+  };
 
   return (
     <article className={`bubble ${role === "user" ? "user" : "assistant"} ${safetyTriggered ? "safety-bubble" : ""}`}>
@@ -100,18 +161,11 @@ export default function MessageBubble({
           <div className="assistant-structured">
             <div className="assistant-text">{renderStructuredText(text)}</div>
 
-            <div className="meta-row">
-              {showConfidence ? (
-                <span className={`confidence confidence-${confidenceValue}`}>
-                  Confidence: {confidence}
-                </span>
-              ) : null}
-              {isOutOfScope ? <span className="query-type">Out of scope</span> : null}
-            </div>
+            {isOutOfScope ? <div className="meta-row"><span className="query-type">Out of scope</span></div> : null}
 
-            {safetyTriggered ? (
-              <div className="safety-note">
-                This response provides general legal information only and is not personalised legal advice.
+            {isSafety ? (
+              <div className="safety-note" role="status" aria-live="polite">
+                General legal information only - not personalised legal advice.
               </div>
             ) : null}
 
@@ -121,19 +175,24 @@ export default function MessageBubble({
                 <ul className="source-list">
                   {citations.map((c, idx) => (
                     <li key={`${c.source || "source"}-${idx}`} className="source-card">
-                      <strong>{c.title || "Source"}</strong>
-                      {c.source ? <span className="source-domain">{c.source}</span> : null}
+                      <strong>{compactSourceTitle(c.title)}</strong>
+                      <span className="source-domain">{sourceLabel(c)}</span>
+                      {c.url ? (
+                        <a href={c.url} target="_blank" rel="noreferrer" className="source-link">
+                          View Source
+                        </a>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
               </>
             ) : null}
 
-            {Array.isArray(suggestedFollowUps) && suggestedFollowUps.length ? (
+            {suggestionChips.length ? (
               <>
                 <p className="section-label">You might also ask:</p>
                 <div className="suggestions">
-                  {suggestedFollowUps.slice(0, 3).map((item) => (
+                  {suggestionChips.slice(0, 5).map((item) => (
                     <button
                       key={item}
                       type="button"
@@ -145,6 +204,20 @@ export default function MessageBubble({
                   ))}
                 </div>
               </>
+            ) : null}
+
+            <div className="answer-tools">
+              <button type="button" className="ghost" onClick={handleCopy}>Copy answer</button>
+              {copied ? <span className="copied-note">Copied</span> : null}
+              <button type="button" className={`ghost feedback-btn ${feedback === "helpful" ? "active" : ""}`} onClick={() => handleFeedback("helpful")}>Helpful</button>
+              <button type="button" className={`ghost feedback-btn ${feedback === "not_helpful" ? "active" : ""}`} onClick={() => handleFeedback("not_helpful")}>Not helpful</button>
+            </div>
+
+            {citations.length ? (
+              <details className="evidence-details">
+                <summary>Evidence details</summary>
+                <p className="evidence-note">Technical retrieval fields are hidden in normal view.</p>
+              </details>
             ) : null}
           </div>
         )
